@@ -21,5 +21,7 @@
       "genie-code"
     ]
   },
-  "created_resources": {}
+  "created_resources": {
+    "pipeline_id": "e0e76340-2ad7-4235-9e46-88228b501ac7"
+  }
 }

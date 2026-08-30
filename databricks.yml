@@ -65,6 +65,25 @@ resources:
               - pandas
               - faker
 
+  # SDP pipeline (specifications/01-lakeflow.md → Section B): reads the raw_data parquet via
+  # read_files(), builds silver (incl. the ai_classify note-risk dedup MV) + gold, and produces
+  # gold_maintenance_recommendations from the pipeline heuristic. Serverless, batch (all MVs).
+  pipelines:
+    volta_plant_floor:
+      name: "[Workshop] Volta Plant Floor — SDP"
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.demo_schema.name}
+      serverless: true
+      photon: true
+      channel: CURRENT
+      libraries:
+        - glob:
+            include: ./transformation/**
+      # Referenced in the SQL as ${catalog}/${schema} for the read_files() Volume path.
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${resources.schemas.demo_schema.name}
+
 targets:
   dev:
     mode: development
