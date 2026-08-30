@@ -1,0 +1,27 @@
+# Databricks bundle local state / caches
+.databricks/
+*.tfstate
+*.tfstate.backup
+
+# Node / app build artifacts
+node_modules/
+dist/
+build/
+.vite/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key
+.databrickscfg
+
+# OS
+.DS_Store
