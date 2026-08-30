@@ -138,6 +138,19 @@ resources:
       new_pipeline_spec:
         storage_catalog: ${var.catalog}
         storage_schema: ${resources.schemas.demo_schema.name}
+    # Parts catalog → Lakebase (indexed by Lakebase Search for the expedite-parts play).
+    parts_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.parts
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_parts
+      primary_key_columns:
+        - part_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
 
 targets:
   dev:

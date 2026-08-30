@@ -30,7 +30,8 @@
     "lakebase_synced_tables": [
       "line_status",
       "open_atrisk",
-      "maintenance_recommendations"
+      "maintenance_recommendations",
+      "parts"
     ]
   }
 }
