@@ -84,6 +84,61 @@ resources:
         catalog: ${var.catalog}
         schema: ${resources.schemas.demo_schema.name}
 
+  # Milestone 2 (Lakebase) — the low-latency serving + write surface for the app.
+  # Autoscaling Lakebase Postgres project (scale-to-zero). Synced tables from the gold
+  # tables are added separately (postgres_synced_tables is not in this CLI's bundle schema yet).
+  postgres_projects:
+    volta_lakebase:
+      project_id: volta-plant-floor
+      display_name: "Volta Plant Floor"
+      pg_version: 17
+      default_endpoint_settings:
+        autoscaling_limit_min_cu: 0.5
+        autoscaling_limit_max_cu: 1
+        suspend_timeout_duration: 300s
+
+  # UC → Lakebase synced tables (SNAPSHOT — MV sources, no CDF needed). PK = line_id.
+  # The synced table's UC entry lives in our existing catalog/schema (no separate Lakebase
+  # database catalog needed — avoids CREATE CATALOG on the metastore); the data lands in the
+  # Lakebase project via `branch` + `postgres_database`.
+  postgres_synced_tables:
+    line_status_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.line_status
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_line_status
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+    open_atrisk_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.open_atrisk
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_open_atrisk
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+    maintenance_recommendations_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.maintenance_recommendations
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_maintenance_recommendations
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+
 targets:
   dev:
     mode: development
