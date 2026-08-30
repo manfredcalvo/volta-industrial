@@ -22,6 +22,9 @@
     ]
   },
   "created_resources": {
-    "pipeline_id": "e0e76340-2ad7-4235-9e46-88228b501ac7"
+    "pipeline_id": "e0e76340-2ad7-4235-9e46-88228b501ac7",
+    "metric_view_name": "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.mv_line_risk",
+    "genie_space_id": "01f1a423e4f41fc889a1153328060aa4",
+    "dashboard_id": "01f1a4275b941d759767cfd2fb855d18"
   }
 }

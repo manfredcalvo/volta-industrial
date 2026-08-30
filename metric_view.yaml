@@ -1,0 +1,66 @@
+# mv_line_risk — the ONE governed definition of Volta's downtime-exposure metrics
+# (specifications/02-uc-governance.md). Source: gold_line_status (current per-line position).
+# Consumed by the dashboard KPI tiles, Sam's Genie answers, and the app's KPI cards — all read
+# these same measures via MEASURE(...).
+#
+# Deployed with:
+#   CREATE OR REPLACE VIEW <catalog>.<schema>.mv_line_risk WITH METRICS LANGUAGE YAML AS $$ <this> $$
+# For this workspace: serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial
+version: 1.1
+source: serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_line_status
+comment: "Volta downtime-exposure metrics — the governed KPI layer over gold_line_status (dashboard + Genie + app)."
+
+dimensions:
+  - name: plant_id
+    expr: plant_id
+    comment: "Plant (PLANT-01..08)."
+  - name: machine_type
+    expr: machine_type
+  - name: risk_band
+    expr: risk_band
+    comment: "critical / elevated / watch / healthy."
+  - name: criticality
+    expr: criticality
+    comment: "SLA weight: high / medium / low."
+  - name: line_id
+    expr: line_id
+
+measures:
+  - name: downtime_exposure
+    expr: SUM(downtime_exposure_usd)
+    comment: "Downtime-at-risk exposure ($) — rolls up to ~$3.3M across at-risk lines."
+  - name: open_work_orders
+    expr: SUM(open_wo_count)
+  - name: line_count
+    expr: COUNT(1)
+  - name: critical_count
+    expr: SUM(CASE WHEN risk_band = 'critical' THEN 1 ELSE 0 END)
+  - name: elevated_count
+    expr: SUM(CASE WHEN risk_band = 'elevated' THEN 1 ELSE 0 END)
+  - name: atrisk_count
+    expr: SUM(CASE WHEN risk_band IN ('critical','elevated') THEN 1 ELSE 0 END)
+  - name: avg_failure_risk
+    expr: AVG(failure_risk_score)
+  - name: avg_vibration
+    expr: AVG(vibration_rms)
+
+materialization:
+  schedule: every 6 hours
+  mode: relaxed
+  materialized_views:
+    - name: line_risk_rollup
+      type: aggregated
+      dimensions:
+        - plant_id
+        - machine_type
+        - risk_band
+        - criticality
+      measures:
+        - downtime_exposure
+        - open_work_orders
+        - line_count
+        - critical_count
+        - elevated_count
+        - atrisk_count
+        - avg_failure_risk
+        - avg_vibration

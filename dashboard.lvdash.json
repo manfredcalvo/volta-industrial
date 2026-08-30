@@ -1,0 +1,1114 @@
+{
+  "datasets": [
+    {
+      "name": "ds_exposure",
+      "displayName": "Exposure (metric view)",
+      "queryLines": [
+        "SELECT plant_id, machine_type, risk_band, criticality,",
+        " MEASURE(downtime_exposure) AS downtime_exposure_usd,",
+        " MEASURE(open_work_orders) AS open_work_orders,",
+        " MEASURE(critical_count) AS critical_count,",
+        " MEASURE(atrisk_count) AS atrisk_count,",
+        " MEASURE(line_count) AS line_count",
+        " FROM serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.mv_line_risk GROUP BY ALL"
+      ]
+    },
+    {
+      "name": "ds_lines",
+      "displayName": "Lines (current status)",
+      "queryLines": [
+        "SELECT line_id, plant_id, machine_type, criticality, plant_lat, plant_lng, risk_band,",
+        " failure_risk_score, vibration_rms, temperature_c, open_wo_count, downtime_exposure_usd",
+        " FROM serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_line_status"
+      ]
+    },
+    {
+      "name": "ds_maintenance",
+      "displayName": "Maintenance recommendations",
+      "queryLines": [
+        "SELECT r.line_id, a.plant_id, r.recommended_action,",
+        " r.predicted_downtime_cost_avoided_usd, r.predicted_net_value_usd",
+        " FROM serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_maintenance_recommendations r",
+        " LEFT JOIN serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_open_atrisk a USING (line_id)",
+        " ORDER BY r.predicted_net_value_usd DESC"
+      ]
+    },
+    {
+      "name": "ds_worst",
+      "displayName": "Highest exposure lines",
+      "queryLines": [
+        "SELECT line_id, plant_id, machine_type, vibration_rms, failure_risk_score, downtime_exposure_usd",
+        " FROM serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_line_status WHERE risk_band IN ('critical','elevated')",
+        " ORDER BY downtime_exposure_usd DESC"
+      ]
+    },
+    {
+      "name": "ds_watch",
+      "displayName": "Watch list",
+      "queryLines": [
+        "SELECT line_id, plant_id, failure_risk_score, open_wo_count",
+        " FROM serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.gold_line_status WHERE risk_band='watch' ORDER BY failure_risk_score DESC"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "plant_floor",
+      "displayName": "Plant Floor",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "p1-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Volta Plant Floor"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-sub",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Sam Ortiz, VP Manufacturing Operations. A high-utilization run ~3 weeks ago wore a cluster of lines toward failure (red \u2014 trending to a stop). Downtime exposure and the recommended action."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-exposure",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "sum(downtime_exposure_usd)",
+                      "expression": "SUM(`downtime_exposure_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(downtime_exposure_usd)",
+                  "displayName": "Downtime exposure",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Downtime exposure",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-wos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "sum(open_work_orders)",
+                      "expression": "SUM(`open_work_orders`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(open_work_orders)",
+                  "displayName": "Open work orders",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Open work orders",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-critical",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "sum(critical_count)",
+                      "expression": "SUM(`critical_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(critical_count)",
+                  "displayName": "Critical lines",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Critical lines",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-atrisk",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "sum(atrisk_count)",
+                      "expression": "SUM(`atrisk_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(atrisk_count)",
+                  "displayName": "At-risk lines",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "At-risk lines",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "scatter-risk",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_lines",
+                  "fields": [
+                    {
+                      "name": "vibration_rms",
+                      "expression": "`vibration_rms`"
+                    },
+                    {
+                      "name": "failure_risk_score",
+                      "expression": "`failure_risk_score`"
+                    },
+                    {
+                      "name": "risk_band",
+                      "expression": "`risk_band`"
+                    },
+                    {
+                      "name": "open_wo_count",
+                      "expression": "`open_wo_count`"
+                    },
+                    {
+                      "name": "line_id",
+                      "expression": "`line_id`"
+                    },
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "vibration_rms",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Vibration (RMS)"
+                },
+                "y": {
+                  "fieldName": "failure_risk_score",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Failure risk"
+                },
+                "color": {
+                  "fieldName": "risk_band",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risk band"
+                },
+                "size": {
+                  "fieldName": "open_wo_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Open WOs"
+                }
+              },
+              "frame": {
+                "title": "Failure risk vs vibration \u2014 the red cluster is trending to a stop",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-plant-band",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    },
+                    {
+                      "name": "risk_band",
+                      "expression": "`risk_band`"
+                    },
+                    {
+                      "name": "sum(atrisk_count)",
+                      "expression": "SUM(`atrisk_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "mark": {
+                "layout": "group"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "plant_id",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Plant"
+                },
+                "y": {
+                  "fieldName": "sum(atrisk_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "At-risk lines"
+                },
+                "color": {
+                  "fieldName": "risk_band",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risk band"
+                }
+              },
+              "frame": {
+                "title": "At-risk lines by plant & band",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-machine-exposure",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "machine_type",
+                      "expression": "`machine_type`"
+                    },
+                    {
+                      "name": "sum(downtime_exposure_usd)",
+                      "expression": "SUM(`downtime_exposure_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(downtime_exposure_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Downtime exposure ($)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "machine_type",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Machine type"
+                }
+              },
+              "frame": {
+                "title": "Downtime exposure by machine type",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "maintenance",
+      "displayName": "Maintenance",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "p2-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Maintenance \u2014 pull now or run?"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-sub",
+            "multilineTextboxSpec": {
+              "lines": [
+                "The lines trending to a stop, whether the part is local, and the model's recommended action with the downtime cost it avoids."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl-worst",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_worst",
+                  "fields": [
+                    {
+                      "name": "line_id",
+                      "expression": "`line_id`"
+                    },
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    },
+                    {
+                      "name": "machine_type",
+                      "expression": "`machine_type`"
+                    },
+                    {
+                      "name": "vibration_rms",
+                      "expression": "`vibration_rms`"
+                    },
+                    {
+                      "name": "failure_risk_score",
+                      "expression": "`failure_risk_score`"
+                    },
+                    {
+                      "name": "downtime_exposure_usd",
+                      "expression": "`downtime_exposure_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "line_id",
+                    "displayName": "Line"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant"
+                  },
+                  {
+                    "fieldName": "machine_type",
+                    "displayName": "Machine"
+                  },
+                  {
+                    "fieldName": "vibration_rms",
+                    "displayName": "Vibration"
+                  },
+                  {
+                    "fieldName": "failure_risk_score",
+                    "displayName": "Failure risk"
+                  },
+                  {
+                    "fieldName": "downtime_exposure_usd",
+                    "displayName": "Exposure ($)"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Highest downtime exposure",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl-watch",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_watch",
+                  "fields": [
+                    {
+                      "name": "line_id",
+                      "expression": "`line_id`"
+                    },
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    },
+                    {
+                      "name": "failure_risk_score",
+                      "expression": "`failure_risk_score`"
+                    },
+                    {
+                      "name": "open_wo_count",
+                      "expression": "`open_wo_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "line_id",
+                    "displayName": "Line"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant"
+                  },
+                  {
+                    "fieldName": "failure_risk_score",
+                    "displayName": "Failure risk"
+                  },
+                  {
+                    "fieldName": "open_wo_count",
+                    "displayName": "Open WOs"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Rising-risk watch list",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-action-mix",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_maintenance",
+                  "fields": [
+                    {
+                      "name": "recommended_action",
+                      "expression": "`recommended_action`"
+                    },
+                    {
+                      "name": "count(line_id)",
+                      "expression": "COUNT(`line_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "recommended_action",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Recommended action"
+                },
+                "y": {
+                  "fieldName": "count(line_id)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Lines"
+                }
+              },
+              "frame": {
+                "title": "Recommended action (mix)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-avoided",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_maintenance",
+                  "fields": [
+                    {
+                      "name": "sum(predicted_downtime_cost_avoided_usd)",
+                      "expression": "SUM(`predicted_downtime_cost_avoided_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(predicted_downtime_cost_avoided_usd)",
+                  "displayName": "Total predicted downtime cost avoided",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Total predicted downtime cost avoided",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 8,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl-maintenance",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_maintenance",
+                  "fields": [
+                    {
+                      "name": "line_id",
+                      "expression": "`line_id`"
+                    },
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    },
+                    {
+                      "name": "recommended_action",
+                      "expression": "`recommended_action`"
+                    },
+                    {
+                      "name": "predicted_downtime_cost_avoided_usd",
+                      "expression": "`predicted_downtime_cost_avoided_usd`"
+                    },
+                    {
+                      "name": "predicted_net_value_usd",
+                      "expression": "`predicted_net_value_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "line_id",
+                    "displayName": "Line"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant"
+                  },
+                  {
+                    "fieldName": "recommended_action",
+                    "displayName": "Action"
+                  },
+                  {
+                    "fieldName": "predicted_downtime_cost_avoided_usd",
+                    "displayName": "Avoided ($)"
+                  },
+                  {
+                    "fieldName": "predicted_net_value_usd",
+                    "displayName": "Net value ($)"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Maintenance recommendations",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "filters",
+      "displayName": "Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "f-plant",
+            "queries": [
+              {
+                "name": "ds_exposure_plant_id",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_lines_plant_id",
+                "query": {
+                  "datasetName": "ds_lines",
+                  "fields": [
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_worst_plant_id",
+                "query": {
+                  "datasetName": "ds_worst",
+                  "fields": [
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_watch_plant_id",
+                "query": {
+                  "datasetName": "ds_watch",
+                  "fields": [
+                    {
+                      "name": "plant_id",
+                      "expression": "`plant_id`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant",
+                    "queryName": "ds_exposure_plant_id"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant",
+                    "queryName": "ds_lines_plant_id"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant",
+                    "queryName": "ds_worst_plant_id"
+                  },
+                  {
+                    "fieldName": "plant_id",
+                    "displayName": "Plant",
+                    "queryName": "ds_watch_plant_id"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Plant"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f-machine",
+            "queries": [
+              {
+                "name": "ds_exposure_machine_type",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "machine_type",
+                      "expression": "`machine_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_lines_machine_type",
+                "query": {
+                  "datasetName": "ds_lines",
+                  "fields": [
+                    {
+                      "name": "machine_type",
+                      "expression": "`machine_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_worst_machine_type",
+                "query": {
+                  "datasetName": "ds_worst",
+                  "fields": [
+                    {
+                      "name": "machine_type",
+                      "expression": "`machine_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "machine_type",
+                    "displayName": "Machine type",
+                    "queryName": "ds_exposure_machine_type"
+                  },
+                  {
+                    "fieldName": "machine_type",
+                    "displayName": "Machine type",
+                    "queryName": "ds_lines_machine_type"
+                  },
+                  {
+                    "fieldName": "machine_type",
+                    "displayName": "Machine type",
+                    "queryName": "ds_worst_machine_type"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Machine type"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f-band",
+            "queries": [
+              {
+                "name": "ds_exposure_risk_band",
+                "query": {
+                  "datasetName": "ds_exposure",
+                  "fields": [
+                    {
+                      "name": "risk_band",
+                      "expression": "`risk_band`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "ds_lines_risk_band",
+                "query": {
+                  "datasetName": "ds_lines",
+                  "fields": [
+                    {
+                      "name": "risk_band",
+                      "expression": "`risk_band`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "risk_band",
+                    "displayName": "Risk band",
+                    "queryName": "ds_exposure_risk_band"
+                  },
+                  {
+                    "fieldName": "risk_band",
+                    "displayName": "Risk band",
+                    "queryName": "ds_lines_risk_band"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Risk band"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 4,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ]
+}
