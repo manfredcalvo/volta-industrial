@@ -162,6 +162,22 @@ resources:
       name: volta-plant-floor
       description: "Volta Plant Floor — the AI agent's investigate → draft → act surface over governed Lakebase data."
       source_code_path: ./app
+      # OBO user-authorization allowlist (the OAuth integration's max scopes).
+      # app.yaml's user_authorization.scopes requests a subset per session, but
+      # a scope must be allowlisted HERE first or the user's forwarded token
+      # won't carry it (the agent's /serving-endpoints/responses call 403s with
+      # "required scopes: model-serving" otherwise). These canonical short names
+      # match app.yaml. NOTE: adding/removing an app resource can silently wipe
+      # these — re-check `apps get … effective_user_api_scopes` after each deploy.
+      user_api_scopes:
+        - model-serving
+        - genie
+        - sql
+        - postgres
+        - ai-gateway
+        - catalog.catalogs:read
+        - catalog.schemas:read
+        - catalog.tables:read
       resources:
         - name: sql-warehouse
           sql_warehouse:
