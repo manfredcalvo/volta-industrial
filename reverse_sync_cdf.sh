@@ -19,11 +19,11 @@
 set -euo pipefail
 
 PROFILE="${DATABRICKS_PROFILE:-vending-aws-casaman}"
-PARENT="projects/volta-plant-floor/branches/production"
+PARENT="projects/volta-plant-floor/branches/production/databases/databricks-postgres"
 DEST_CATALOG="serverless_stable_casaman_catalog"
 DEST_SCHEMA="dev_manffred_calvosanchez_volta_industrial"
 SOURCE_PG_SCHEMA="ops"
-CDF_ID="volta-ops-cdf"
+CDF_ID="volta_ops_cdf"
 
 # Define the reverse sync as code:
 databricks postgres create-cdf-config \
@@ -32,5 +32,5 @@ databricks postgres create-cdf-config \
   --profile "$PROFILE"
 
 # Inspect status:
-databricks postgres get-cdf-status "$PARENT/cdfConfigs/$CDF_ID" --profile "$PROFILE" || true
+databricks postgres get-cdf-status "$PARENT/cdf-configs/$CDF_ID" --profile "$PROFILE" || true
 databricks postgres list-cdf-statuses "$PARENT" --profile "$PROFILE" || true
