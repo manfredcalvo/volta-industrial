@@ -85,8 +85,15 @@ export async function syncFromDelta(
       last_check_at: string | null;
     }>(
       warehouseId,
-      `SELECT id, line_id, plant_id, line_name, plant_name, region,
-              failure_risk_score, downtime_exposure_usd, current_status, last_check_at
+      // gold_line_status carries risk_band + geo (not id/plant_name/current_status),
+      // so derive the app-schema columns here.
+      `SELECT concat(line_id, ':', plant_id) AS id, line_id, plant_id, line_name,
+              CAST(NULL AS STRING) AS plant_name, CAST(NULL AS STRING) AS region,
+              failure_risk_score, downtime_exposure_usd,
+              CASE WHEN risk_band = 'critical' THEN 'critical'
+                   WHEN risk_band IN ('elevated', 'watch') THEN 'at_risk'
+                   ELSE 'healthy' END AS current_status,
+              CAST(NULL AS TIMESTAMP) AS last_check_at
        FROM ${fq('lineStatus')}`,
     ),
     execSql<{
@@ -114,7 +121,8 @@ export async function syncFromDelta(
           scored_at: string | null;
         }>(
           warehouseId,
-          `SELECT line_id, recommended_action, predicted_downtime_cost_usd,
+          `SELECT line_id, recommended_action,
+                  predicted_downtime_cost_avoided_usd AS predicted_downtime_cost_usd,
                   action_ranking, scored_at
            FROM ${fq('maintenanceRecommendations')}`,
         ).catch((err) => {
@@ -141,7 +149,8 @@ export async function syncFromDelta(
       unit_cost_usd: number | null;
     }>(
       warehouseId,
-      `SELECT id, part_id, part_name, part_category, description,
+      // gold_parts uses part_type (not part_category) and has no separate id.
+      `SELECT part_id AS id, part_id, part_name, part_type AS part_category, description,
               part_local, lead_time_days, unit_cost_usd
        FROM ${fq('parts')}`,
     ),

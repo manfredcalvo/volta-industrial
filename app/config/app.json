@@ -60,7 +60,7 @@
       "lineStatus":                 "gold_line_status",
       "openAtrisk":                 "gold_open_atrisk",
       "maintenanceRecommendations": "gold_maintenance_recommendations",
-      "parts":                      "raw_parts"
+      "parts":                      "gold_parts"
     }
   },
 
