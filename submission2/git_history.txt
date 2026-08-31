@@ -1,6 +1,8 @@
-*   8855a77 (HEAD -> main) Merge build2-app: Build-2 Volta app port, deploy, auth fixes + submission2 evidence
+* 7678e1f (HEAD -> main) Build 2: add executed search notebook (execution evidence for Build-1 index retrieval)
+* e81b4b0 (origin/main) refresh git_history.txt with the build2-app merge
+*   8855a77 Merge build2-app: Build-2 Volta app port, deploy, auth fixes + submission2 evidence
 |\  
-| * 516241c (build2-app) Build 2 app: search_parts retrieves from the Build-1 Lakebase Search index + submission2 evidence
+| * 516241c (origin/build2-app, build2-app) Build 2 app: search_parts retrieves from the Build-1 Lakebase Search index + submission2 evidence
 | * 8103842 Run all agent Databricks calls as the app SP; probe egress proxy
 | * e1776fd Call Genie (ask_data) as the app SP + bind the Genie space
 | * f595879 Diagnose MLflow trace-data upload egress + fix span name
@@ -9,7 +11,7 @@
 | * 48ab4a1 Fix app OBO scopes: declare user_api_scopes on the app resource
 | * d6c0dca M3 Phase B: port the app to the Volta plant-floor domain + deploy
 |/  
-* e89d8cf (origin/main) M3 app: pin openai ^7 (match @openai/agents), fix searchParts import alias; server typecheck passes
+* e89d8cf M3 app: pin openai ^7 (match @openai/agents), fix searchParts import alias; server typecheck passes
 * 0f76dec M3 app: add app to root bundle (resources.apps + warehouse/Lakebase bindings, artifact build, sync); reconstruct package.json
 * 9f8e6e2 M3 app: implement agent tools (find_atrisk_line, rank_maintenance_actions, search_parts, execute_maintenance_action) + query helpers
 * 15a481b refresh git_history.txt
