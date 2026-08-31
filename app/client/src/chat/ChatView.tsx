@@ -179,7 +179,7 @@ export function ChatView() {
               <div>
                 <div className="font-semibold text-base">New conversation</div>
                 <div className="text-sm text-muted-foreground mt-0.5">
-                  I can investigate your data and take action on returns.
+                  I can investigate the plant floor and take action on at-risk lines.
                 </div>
               </div>
               <button

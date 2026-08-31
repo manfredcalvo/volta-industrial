@@ -1,40 +1,21 @@
 /**
  * Analytics — warehouse-backed charts.
  *
- * Template intent: surfaces the "lakehouse analytics" half of the story —
- * live SQL-warehouse queries against the Delta lakehouse (not a mock). The
- * header shows the warehouse name + state to make that obvious.
- *
- * How the data flows: each chart fetches `/api/charts/<key>` (see
- * server/routes/charts.ts). That route reads config/queries/<key>.sql —
- * written SCHEMA-RELATIVE (`FROM silver_returns`, no catalog/schema
- * qualifier) — and runs it with the demo's catalog+schema as the SQL
- * session context, so one env var (DEMO_CATALOG/DEMO_SCHEMA) drives the
- * analytics tables on any workspace. Rows come back via `useChartData` and
- * feed the chart components' `data` prop.
- *
- * NOTE: we deliberately do NOT use AppKit's `useAnalyticsQuery` /
- * `<Chart queryKey=…>` plugin path — its query route can't set the
- * statement catalog/schema, so it would force hardcoded `cat.schema.table`
- * in every SQL file (breaks across workspaces). The custom route is the fix.
+ * Live SQL-warehouse queries against the Delta lakehouse (not a mock).
+ * Each chart fetches `/api/charts/<key>` (see server/routes/charts.ts),
+ * which reads config/queries/<key>.sql and binds the demo catalog/schema
+ * so one env var drives the analytics tables on any workspace. Rows come
+ * back via `useChartData` and feed the chart components' `data` prop.
  *
  * Repurposing: edit/add a .sql under config/queries/, register its key in
  * charts.ts's QUERY_FILES map, and reference it here via <ChartData chartKey=…>.
  */
 import { useEffect, useState } from 'react';
-import { BarChart, LineChart } from '@databricks/appkit-ui/react';
+import { BarChart } from '@databricks/appkit-ui/react';
 import { fetchWarehouse, type Warehouse } from '@/lib/api';
 import { BRAND_PALETTE } from '@/lib/brand';
-import { FacilityPanel } from './FacilityPanel';
 import { RtPitch } from '@/architecture/RtPitch';
 
-/**
- * Fetch chart rows from the server's /api/charts/<key> route. That route
- * reads the query SQL, substitutes the demo catalog/schema, and runs it
- * against the SQL warehouse — so a single env var drives the catalog/schema
- * for analytics just like the rest of the app (see server/routes/charts.ts).
- * We pass the returned rows to the chart components via their `data` prop.
- */
 function useChartData<T = Record<string, unknown>>(key: string): {
   data: T[] | null;
   error: string | null;
@@ -81,15 +62,16 @@ export function AnalyticsView() {
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2">
-            Operations analytics
+            Plant-floor analytics
           </div>
           <h1 className="display text-4xl font-semibold tracking-tight text-foreground mb-2">
-            Where the returns are coming from.
+            Where the downtime risk is concentrated.
           </h1>
           <p className="text-muted-foreground max-w-2xl">
             Live queries against the SQL warehouse — the same numbers the
             assistant reasons about, on a single page. Use the queue to take
-            action; use this page to spot patterns.
+            action; use this page to spot patterns across plants and machine
+            types.
           </p>
         </div>
 
@@ -102,39 +84,37 @@ export function AnalyticsView() {
           latencyMs={null}
         />
 
-        {/* Top row: two charts side-by-side. Trend (wider) + product mix. */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <ChartCard
-            title="Daily refund value"
-            scope="Last 30 days"
+            title="Worst lines by downtime exposure"
+            scope="Top 15"
             className="lg:col-span-3"
           >
-            <ChartData chartKey="daily_refund_trend" height={260}>
+            <ChartData chartKey="worst_lines" height={260}>
               {(rows) => (
-                <LineChart
+                <BarChart
                   data={rows}
-                  xKey="return_date"
-                  yKey="total_refund_usd"
+                  xKey="line_name"
+                  yKey="downtime_exposure_usd"
                   colors={[BRAND_PALETTE[0]]}
                   height={260}
-                  smooth
                 />
               )}
             </ChartData>
           </ChartCard>
 
           <ChartCard
-            title="Top products by returns"
-            scope="All time"
+            title="Exposure by machine type"
+            scope="All lines"
             className="lg:col-span-2"
           >
-            <ChartData chartKey="returns_by_product" height={260}>
+            <ChartData chartKey="risk_by_machine_type" height={260}>
               {(rows) => (
                 <BarChart
                   data={rows}
-                  xKey="product_name"
-                  yKey="return_count"
-                  colors={[BRAND_PALETTE[0]]}
+                  xKey="machine_type"
+                  yKey="total_exposure_usd"
+                  colors={[BRAND_PALETTE[1]]}
                   height={260}
                 />
               )}
@@ -142,18 +122,12 @@ export function AnalyticsView() {
           </ChartCard>
         </div>
 
-        <FacilityPanel />
-
-        <ChartCard title="Worst production lots" scope="By return rate" flush>
-          {/* Desktop / tablet: compact custom table — appkit's DataTable
-              auto-mode gives wide auto-sized columns; we want a denser
-              layout where Region + Returns + Rate + Refund fit without
-              overflow. Phone-only card list lives in WorstLotsMobile. */}
+        <ChartCard title="Worst lines" scope="By downtime exposure" flush>
           <div className="hidden sm:block">
-            <WorstLotsTable />
+            <WorstLinesTable />
           </div>
           <div className="sm:hidden">
-            <WorstLotsMobile />
+            <WorstLinesMobile />
           </div>
         </ChartCard>
       </div>
@@ -161,12 +135,6 @@ export function AnalyticsView() {
   );
 }
 
-/**
- * Wraps a chart/table in a bordered card with a compact header (title +
- * scope chip). Cuts the wall-of-H2-text the page used to have and gives
- * every analytics block a consistent frame. `flush` removes inner padding
- * for components that draw their own (e.g. DataTable).
- */
 function ChartCard({
   title,
   scope,
@@ -197,11 +165,6 @@ function ChartCard({
   );
 }
 
-/**
- * Fetches /api/charts/<chartKey> and renders the rows via `children` once
- * ready, with loading/error/empty fallbacks (data-mode charts don't fetch
- * on their own, so we own the states here).
- */
 function ChartData({
   chartKey,
   height,
@@ -237,44 +200,34 @@ function ChartData({
   return <>{children(data)}</>;
 }
 
-/**
- * worst_lots — phone card list + desktop dense table.
- *
- * Both renderers share the query (one fetch), the row shape, the
- * severity thresholds, and the loading/error/empty states. The only
- * thing that varies between desktop and mobile is the row layout.
- */
-type WorstLotRow = {
-  lot_id: string;
-  product_name: string | null;
-  facility: string | null;
-  region: string | null;
-  return_count: number;
-  units_sold: number;
-  return_rate_pct: number;
-  total_refund_usd: number;
+type WorstLineRow = {
+  line_id: string;
+  line_name: string | null;
+  plant_id: string | null;
+  machine_type: string | null;
+  failure_risk_score: number;
+  risk_band: string | null;
+  downtime_exposure_usd: number;
 };
 
-/** Color the rate by severity. Uses --severity-* tokens so a re-theme
- *  picks them up; thresholds are hardcoded business logic. */
-function rateToneClass(pct: number): string {
-  if (pct >= 20) return 'text-[var(--severity-danger)]';
-  if (pct >= 10) return 'text-[var(--severity-warning)]';
+function bandToneClass(band: string | null): string {
+  if (band === 'critical') return 'text-[var(--severity-danger)]';
+  if (band === 'elevated') return 'text-[var(--severity-warning)]';
   return 'text-foreground';
 }
 
 const compactUsd = (n: number) =>
   '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-/** Shared fetch + state-handling. Returns either ready data or a
- *  fallback ReactNode to render in the empty / loading / error cases. */
-function useWorstLots(): { data: WorstLotRow[] } | { fallback: React.ReactNode } {
-  const { data, error, isLoading } = useChartData<WorstLotRow>('worst_lots');
+function useWorstLines():
+  | { data: WorstLineRow[] }
+  | { fallback: React.ReactNode } {
+  const { data, error, isLoading } = useChartData<WorstLineRow>('worst_lines');
   if (error) {
     return {
       fallback: (
         <div className="px-4 py-3 text-sm text-destructive">
-          Couldn't load lots: {error}
+          Couldn't load lines: {error}
         </div>
       ),
     };
@@ -292,7 +245,7 @@ function useWorstLots(): { data: WorstLotRow[] } | { fallback: React.ReactNode }
     return {
       fallback: (
         <div className="px-4 py-6 text-sm text-muted-foreground text-center">
-          No lots returned data.
+          No lines returned data.
         </div>
       ),
     };
@@ -300,43 +253,41 @@ function useWorstLots(): { data: WorstLotRow[] } | { fallback: React.ReactNode }
   return { data };
 }
 
-function WorstLotsMobile() {
-  const r = useWorstLots();
+function WorstLinesMobile() {
+  const r = useWorstLines();
   if ('fallback' in r) return r.fallback;
   return (
     <ul className="divide-y divide-border">
       {r.data.map((row) => (
-        <li key={row.lot_id} className="px-4 py-3">
+        <li key={row.line_id} className="px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="font-mono text-xs text-muted-foreground">
-                {row.lot_id}
+                {row.line_id}
               </div>
               <div className="text-sm font-medium truncate mt-0.5">
-                {row.product_name ?? '—'}
+                {row.line_name ?? '—'}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {[row.facility, row.region].filter(Boolean).join(' · ') || '—'}
+                {[row.plant_id, row.machine_type].filter(Boolean).join(' · ') ||
+                  '—'}
               </div>
             </div>
             <div className="shrink-0 text-right">
               <div
-                className={`display text-xl font-semibold ${rateToneClass(row.return_rate_pct)}`}
+                className={`display text-xl font-semibold ${bandToneClass(row.risk_band)}`}
               >
-                {row.return_rate_pct}%
+                {(row.failure_risk_score * 100).toFixed(0)}%
               </div>
               <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                return rate
+                failure risk
               </div>
             </div>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>
-              {row.return_count.toLocaleString()} returned ·{' '}
-              {row.units_sold.toLocaleString()} sold
-            </span>
+            <span>{row.risk_band ?? '—'}</span>
             <span className="font-mono text-foreground">
-              {compactUsd(row.total_refund_usd)}
+              {compactUsd(row.downtime_exposure_usd)}
             </span>
           </div>
         </li>
@@ -345,46 +296,47 @@ function WorstLotsMobile() {
   );
 }
 
-function WorstLotsTable() {
-  const r = useWorstLots();
+function WorstLinesTable() {
+  const r = useWorstLines();
   if ('fallback' in r) return r.fallback;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm tabular-nums">
         <thead className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
           <tr className="border-b border-border">
-            <th className="text-left font-medium px-3 py-2">Lot</th>
-            <th className="text-left font-medium px-3 py-2">Product</th>
-            <th className="text-left font-medium px-3 py-2">Facility</th>
-            <th className="text-left font-medium px-3 py-2">Region</th>
-            <th className="text-right font-medium px-3 py-2">Returns</th>
-            <th className="text-right font-medium px-3 py-2">Rate</th>
-            <th className="text-right font-medium px-3 py-2">Refund</th>
+            <th className="text-left font-medium px-3 py-2">Line</th>
+            <th className="text-left font-medium px-3 py-2">Plant</th>
+            <th className="text-left font-medium px-3 py-2">Machine</th>
+            <th className="text-left font-medium px-3 py-2">Band</th>
+            <th className="text-right font-medium px-3 py-2">Risk</th>
+            <th className="text-right font-medium px-3 py-2">Exposure</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {r.data.map((row) => (
-            <tr key={row.lot_id} className="hover:bg-muted/40">
-              <td className="px-3 py-2 font-mono text-xs">{row.lot_id}</td>
-              <td className="px-3 py-2 truncate max-w-[14rem]">
-                {row.product_name ?? '—'}
+            <tr key={row.line_id} className="hover:bg-muted/40">
+              <td className="px-3 py-2">
+                <span className="font-medium">{row.line_name ?? '—'}</span>
+                <span className="font-mono text-[11px] text-muted-foreground ml-2">
+                  {row.line_id}
+                </span>
               </td>
               <td className="px-3 py-2 text-muted-foreground">
-                {row.facility ?? '—'}
+                {row.plant_id ?? '—'}
               </td>
               <td className="px-3 py-2 text-muted-foreground">
-                {row.region ?? '—'}
+                {row.machine_type ?? '—'}
               </td>
-              <td className="px-3 py-2 text-right">
-                {row.return_count.toLocaleString()}
+              <td className={`px-3 py-2 ${bandToneClass(row.risk_band)}`}>
+                {row.risk_band ?? '—'}
               </td>
               <td
-                className={`px-3 py-2 text-right font-semibold ${rateToneClass(row.return_rate_pct)}`}
+                className={`px-3 py-2 text-right font-semibold ${bandToneClass(row.risk_band)}`}
               >
-                {row.return_rate_pct}%
+                {(row.failure_risk_score * 100).toFixed(0)}%
               </td>
               <td className="px-3 py-2 text-right font-mono">
-                {compactUsd(row.total_refund_usd)}
+                {compactUsd(row.downtime_exposure_usd)}
               </td>
             </tr>
           ))}

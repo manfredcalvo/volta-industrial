@@ -1,116 +1,37 @@
 /**
- * The Operations page — the WRITE SURFACE for the use case.
+ * The Operations page — the WRITE SURFACE for the plant floor.
  *
- * Template intent: every use case has a "work queue" — rows waiting for a
- * decision + an audit trail of what happened. This page renders that queue
- * from Lakebase (live, writable, transactional) and stays in sync with the
- * agent's actions via the `dataMutated` pub/sub (when the chat stream
- * completes, the queue refetches — so you literally WATCH the agent's
- * writes land here).
+ * Renders the production-line queue from Lakebase (live, writable,
+ * transactional) and stays in sync with the agent's actions via the
+ * `dataMutated` pub/sub: when the chat stream completes, the queue
+ * refetches — so you literally WATCH the agent's work orders land here.
  *
- * Responsibility: orchestration only — owns filter/selection state, fetches
- * data, subscribes to `dataMutated`. Sub-components render the pieces:
- *
- *    KpiCards       — pending / approved / escalated at a glance
- *    ReturnsTable   — filterable queue, click a row to open the drawer
- *    ReturnDrawer   — slide-over with 3 tabs (Return / Customer / Activity)
- *
- * The "Ask the assistant about this spike" banner at the top is the
- * contextual bridge back into the floating dock — clicking it opens the
- * assistant with a scripted prompt prefilled. Great for showing how the
- * assistant and the queue are two sides of the same data.
- *
- * ─────────────────────────────────────────────────────────────────────
- * REPURPOSING (when changing the data model)
- * ─────────────────────────────────────────────────────────────────────
- * The structural pattern (KPIs + filterable table + detail drawer with
- * timeline) holds for almost any work-queue use case. To swap entities:
- *
- *   1. Update `client/src/shared/types.ts` (the canonical schema —
- *      every page reads from there).
- *   2. Replace `server/db/queries/returns.ts` with queries for the new
- *      entity. Keep the file name aligned with the domain.
- *   3. Rename / rewrite `client/src/lib/returns.ts` (the fetch helpers
- *      that hit /api/returns, /api/lots, etc.).
- *   4. Rename `routes/returns.ts` and update the `/api/...` paths if
- *      you want them to match the new domain (optional — paths are not
- *      semantic, but it's nicer when they read right).
- *   5. Replace the three drawer tabs (Return / Customer / Activity) in
- *      `tabs/` with whatever your entity's detail view needs.
- *   6. If the demo doesn't have a "queue" use case at all, delete this
- *      page from `App.tsx` routing + remove the sidebar entry.
- *
- * If your use case has NO queue/work-list, delete this whole folder.
+ * Orchestration only: owns filter/selection/search state, fetches data,
+ * subscribes to `dataMutated`. Sub-components render the pieces:
+ *    KpiCards    — healthy / at-risk / critical + exposure at a glance
+ *    PlantMap    — geographic exposure bubbles (warehouse-backed)
+ *    LinesTable  — filterable queue, click a row to open the drawer
+ *    LineDrawer  — slide-over with risk, ranked actions, work orders
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import { fetchReturns, fetchReturnsSummary } from '@/lib/returns';
+import { fetchLines, fetchLineSummary } from '@/lib/lines';
 import { useSession } from '@/lib/api';
 import { dataMutated } from '@/lib/events';
 import { dockController } from '@/chat/dockController';
-import type {
-  ReturnRow,
-  ReturnStatus,
-  ReturnsSummary,
-} from '@/shared/types';
+import type { LineRow, LineStatus, StatusSummary } from '@/shared/types';
 
-import { CityMap } from './CityMap';
+import { PlantMap } from './PlantMap';
 import { KpiCards } from './KpiCards';
-import { ReturnsTable } from './ReturnsTable';
-import { ReturnDrawer } from './ReturnDrawer';
+import { LinesTable } from './LinesTable';
+import { LineDrawer } from './LineDrawer';
 import { IngestionFlow } from '@/architecture/IngestionFlow';
 
 export function OperationsView() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const lotFromUrl = searchParams.get('lot') ?? '';
-
-  const [filter, setFilter] = useState<ReturnStatus | 'all'>('pending');
-  const [lotFilter, setLotFilter] = useState(lotFromUrl);
-  const [tierFilter, setTierFilter] = useState<'premium' | 'standard' | null>(
-    (searchParams.get('tier') as 'premium' | 'standard' | null) ?? null,
-  );
-  const [countryFilter, setCountryFilter] = useState<string | null>(
-    searchParams.get('country') ?? null,
-  );
-  const [sort, setSort] = useState<'anger' | 'recent' | 'value'>(
-    (searchParams.get('sort') as 'anger' | 'recent' | 'value') ?? 'recent',
-  );
+  const [filter, setFilter] = useState<LineStatus | 'all'>('all');
   const [search, setSearch] = useState('');
-
-  // Sync all queue filters → URL so deep links + back/forward work.
-  // Handles lot, tier, country, sort in one pass.
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    const setOrDelete = (key: string, value: string | null) => {
-      if (value) next.set(key, value);
-      else next.delete(key);
-    };
-    setOrDelete('lot', lotFilter || null);
-    setOrDelete('tier', tierFilter);
-    setOrDelete('country', countryFilter);
-    // Default sort isn't worth surfacing in the URL.
-    setOrDelete('sort', sort === 'recent' ? null : sort);
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lotFilter, tierFilter, countryFilter, sort]);
-
-  // Update state when URL changes (e.g. user clicks a link from Analytics).
-  useEffect(() => {
-    const urlLot = searchParams.get('lot') ?? '';
-    if (urlLot !== lotFilter) setLotFilter(urlLot);
-    const urlTier = searchParams.get('tier') as 'premium' | 'standard' | null;
-    if (urlTier !== tierFilter) setTierFilter(urlTier);
-    const urlCountry = searchParams.get('country');
-    if (urlCountry !== countryFilter) setCountryFilter(urlCountry);
-    const urlSort = (searchParams.get('sort') as 'anger' | 'value' | null) ?? 'recent';
-    if (urlSort !== sort) setSort(urlSort);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-  const [rows, setRows] = useState<ReturnRow[]>([]);
-  const [summary, setSummary] = useState<ReturnsSummary[]>([]);
+  const [rows, setRows] = useState<LineRow[]>([]);
+  const [summary, setSummary] = useState<StatusSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,14 +41,8 @@ export function OperationsView() {
     setLoading(true);
     try {
       const [list, sum] = await Promise.all([
-        fetchReturns({
-          status: filter === 'all' ? undefined : filter,
-          lot: lotFilter || undefined,
-          tier: tierFilter ?? undefined,
-          country: countryFilter ?? undefined,
-          sort,
-        }),
-        fetchReturnsSummary(),
+        fetchLines(),
+        fetchLineSummary(),
       ]);
       setRows(list);
       setSummary(sum);
@@ -141,48 +56,43 @@ export function OperationsView() {
 
   useEffect(() => {
     void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, lotFilter, tierFilter, countryFilter, sort]);
-
-  useEffect(() => {
     return dataMutated.subscribe(() => {
       void reload();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, lotFilter, tierFilter, countryFilter, sort]);
+  }, []);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.customerName.toLowerCase().includes(q) ||
-        (r.sku ?? '').toLowerCase().includes(q) ||
-        (r.productName ?? '').toLowerCase().includes(q) ||
-        (r.returnReason ?? '').toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+    return rows.filter((r) => {
+      if (filter !== 'all' && r.currentStatus !== filter) return false;
+      if (!q) return true;
+      return (
+        r.lineName.toLowerCase().includes(q) ||
+        r.lineId.toLowerCase().includes(q) ||
+        (r.plantName ?? r.plantId).toLowerCase().includes(q) ||
+        (r.candidatePartId ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [rows, filter, search]);
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
-        {/* Title + situation + CTA stack on the LEFT; the IngestionFlow
-            sits on the RIGHT spanning the full left stack — denser open
-            for the Operations page. Stacks under the title on smaller
-            screens. */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4 lg:items-end">
           <div className="flex flex-col gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2">
-                Returns — operations queue
+                Plant floor — line queue
               </div>
               <h1 className="display text-4xl font-semibold tracking-tight text-foreground mb-2">
-                Work the returns backlog.
+                Work the at-risk lines.
               </h1>
             </div>
             <p className="text-muted-foreground max-w-2xl">
-              Each return is a signal. Approve the refund, reject if invalid, or
-              escalate to QA when a lot-level defect is suspected.
+              Each line carries a failure-risk score and the downtime it puts at
+              risk. Investigate the worst offenders, weigh the ranked actions,
+              and approve a work order — pull the line, run to shift end, or
+              expedite the part.
             </p>
             {config?.assistantScript?.[0] && (
               <button
@@ -202,10 +112,10 @@ export function OperationsView() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-                    Something feels off
+                    A line is trending down
                   </div>
                   <div className="text-sm font-medium text-foreground mt-0.5">
-                    Ask the assistant about this spike
+                    Ask the assistant what's driving the risk
                   </div>
                 </div>
                 <ArrowRight className="size-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
@@ -217,9 +127,9 @@ export function OperationsView() {
 
         <KpiCards summary={summary} />
 
-        <CityMap status={filter} lot={lotFilter} />
+        <PlantMap />
 
-        <ReturnsTable
+        <LinesTable
           rows={filteredRows}
           loading={loading}
           error={error}
@@ -227,27 +137,15 @@ export function OperationsView() {
           onStatusFilter={setFilter}
           search={search}
           onSearch={setSearch}
-          lotFilter={lotFilter}
-          onLotFilter={setLotFilter}
-          tierFilter={tierFilter}
-          onTierFilter={setTierFilter}
-          countryFilter={countryFilter}
-          onCountryFilter={setCountryFilter}
-          sort={sort}
-          onSortChange={setSort}
           onSelect={setSelectedId}
         />
       </div>
 
-      <ReturnDrawer
+      <LineDrawer
         id={selectedId}
         open={selectedId !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
-        }}
-        onMutated={() => {
-          setSelectedId(null);
-          void reload();
         }}
       />
     </div>

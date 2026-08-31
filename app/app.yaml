@@ -44,3 +44,28 @@ env:
   # placeholder resolution.
   - name: WAREHOUSE_ID
     valueFrom: sql-warehouse
+
+  # ── Plain values (set statically) ───────────────────────────────────
+  # Normally finalize_app.sh harvests these from the setup job's
+  # export_resources exit JSON. This demo built the resources by hand, so
+  # we pin them directly to the IDs recorded in resources.json.
+  - name: DEMO_CATALOG
+    value: "serverless_stable_casaman_catalog"
+  - name: DEMO_SCHEMA
+    value: "dev_manffred_calvosanchez_volta_industrial"
+  # Genie-only data backend: GENIE_SPACE_ID set, MAS_ENDPOINT_NAME empty
+  # (plantfloor.ts makeTools registers askData against the Genie space).
+  - name: GENIE_SPACE_ID
+    value: "01f1a423e4f41fc889a1153328060aa4"
+  - name: MAS_ENDPOINT_NAME
+    value: ""
+  - name: DASHBOARD_ID
+    value: "01f1a4275b941d759767cfd2fb855d18"
+  - name: PIPELINE_ID
+    value: "e0e76340-2ad7-4235-9e46-88228b501ac7"
+  - name: LAKEBASE_PROJECT_ID
+    value: "volta-plant-floor"
+  # Empty → the app self-derives /Shared/solution_builder/<app_name>-agent-traces
+  # at boot (server.ts). Pin here only to match an explicit experiment path.
+  - name: AGENT_MLFLOW_EXPERIMENT_PATH
+    value: ""

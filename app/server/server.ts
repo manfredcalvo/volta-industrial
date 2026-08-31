@@ -79,6 +79,7 @@ import { registerConfigRoutes } from './routes/config.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerChartRoutes } from './routes/charts.js';
+import { registerLinesRoutes } from './routes/lines.js';
 import { registerDevLogRoutes } from './routes/dev-log.js';
 
 // ============================================================================
@@ -490,11 +491,9 @@ await createApp({
       agentModel: appConfig.agentModel,
     },
   });
-  // Legacy returns/activity routes — not used in Volta Plant Floor demo.
-  // Trainees build domain-specific routes as needed. Stub imports kept to prevent
-  // accidental use; registrations commented out.
-  // registerReturnsRoutes(app, { db });
-  // registerActivityRoutes(app, { db });
+  // Operations endpoints — line queue, detail drawer, plant rollups, and
+  // the activity feed, all over the Lakebase app.* mirror.
+  registerLinesRoutes(app, { db });
   registerAdminRoutes(app, { db, data: appConfig.data });
 
   // Analytics charts — custom route that substitutes catalog/schema into the

@@ -1,5 +1,5 @@
 /**
- * PlatformDiagram — the "Running LuxeBeauty Returns on the Databricks
+ * PlatformDiagram — the "Running Volta Plant Floor on the Databricks
  * Platform" panel that sits on top of the /platform page. Mirrors the
  * official Data + AI Platform slide layout: a single bordered box with
  * row labels on the left and product tiles on the right, plus a flowing
@@ -279,14 +279,14 @@ export function PlatformDiagram() {
   const href = (u: string) => (u ? u : undefined);
 
   return (
-    <section className="pd-root" aria-label="LuxeBeauty on the Databricks Platform">
+    <section className="pd-root" aria-label="Volta Industrial on the Databricks Platform">
       <style>{CSS}</style>
       <div className="pd-wrap">
         <div className="pd-hero">
           <div className="pd-brand">Databricks Platform</div>
-          <div className="pd-kick">LuxeBeauty · Returns Intelligence</div>
+          <div className="pd-kick">Volta Industrial · Downtime Intelligence</div>
           <h2>
-            Running LuxeBeauty Returns on the{' '}
+            Running Volta Plant Floor on the{' '}
             <span className="pd-hl">Databricks Platform</span>
           </h2>
         </div>
@@ -302,14 +302,14 @@ export function PlatformDiagram() {
             <Prod
               href={href(R.app.url)}
               icon={<AppsIcon />}
-              title="Returns Console"
-              sub="This app — queue, agent, refunds, all in one place"
+              title="Plant Floor Console"
+              sub="This app — line queue, agent, work orders, all in one place"
             />
             <Prod
               href={href(R.dashboard.url)}
               icon={<AIBIIcon />}
               title="AI/BI Dashboard"
-              sub="Where the returns are coming from — same numbers, one page"
+              sub="Where the downtime risk sits — same numbers, one page"
             />
           </Row>
 
@@ -360,7 +360,7 @@ export function PlatformDiagram() {
                   <span className="pd-chip"><AgentsIcon />AGENTS</span>
                   <span className="pd-chip"><CodeIcon />CODE</span>
                 </span>
-                <span className="pd-sub">"Why do I have so many returns?"</span>
+                <span className="pd-sub">"Why is LINE-04 trending toward a stop?"</span>
               </span>
             </div>
             {/* Default href = the workspace-wide Agent Bricks landing
@@ -375,7 +375,7 @@ export function PlatformDiagram() {
               href={href(R.agentBricks.url)}
               icon={<AgentBricksIcon />}
               title="Agent Bricks"
-              sub="Diagnose the spike, draft apology emails, file refunds"
+              sub="Diagnose the risk, rank the actions, cut the work order"
             />
           </Row>
 
@@ -389,7 +389,7 @@ export function PlatformDiagram() {
               href={href(R.catalog.url)}
               icon={<UCIcon />}
               title="Unity Catalog"
-              sub="retail_consumer_goods.luxebeauty_demo — one governed schema + lineage"
+              sub="serverless_stable_casaman_catalog.volta_industrial — one governed schema + lineage"
             />
             <Prod
               href={href(R.gateway.url)}
@@ -401,7 +401,7 @@ export function PlatformDiagram() {
 
           <Row
             ttl="Agentic Data"
-            sub="Unified, real-time data foundation — the returns story"
+            sub="Unified, real-time data foundation — the downtime story"
           >
             <div className="pd-story">
               <FlowKeyframes />
@@ -438,7 +438,7 @@ export function PlatformDiagram() {
                   href={href(R.lakebase.url)}
                   icon={<LakebaseIcon />}
                   title="Lakebase"
-                  sub="Returns Console reads/writes the queue live · branch on reset"
+                  sub="Plant Floor Console reads/writes the queue live · branch on reset"
                 />
               </div>
             </div>
@@ -475,19 +475,19 @@ export function PlatformDiagram() {
         <div className="pd-sources">
           <div className="pd-src">
             <span className="pd-tile"><SrcIcon d={SRC.scan} /></span>
-            <span className="pd-tx"><b>Order POS</b><span>400K orders · 24mo</span></span>
+            <span className="pd-tx"><b>Line Telemetry</b><span>vibration · temp · 24mo</span></span>
           </div>
           <div className="pd-src">
             <span className="pd-tile"><SrcIcon d={SRC.bet} /></span>
-            <span className="pd-tx"><b>CS Tickets</b><span>returns · sentiment</span></span>
+            <span className="pd-tx"><b>Work Orders</b><span>corrective · counts</span></span>
           </div>
           <div className="pd-src">
             <span className="pd-tile"><SrcIcon d={SRC.odds} /></span>
-            <span className="pd-tx"><b>Production Lots</b><span>QC + lot manifests</span></span>
+            <span className="pd-tx"><b>Parts Inventory</b><span>stock + lead times</span></span>
           </div>
           <div className="pd-src">
             <span className="pd-tile"><SrcIcon d={SRC.pdf} /></span>
-            <span className="pd-tx"><b>Manufacturing PDFs</b><span>incident reports → KA</span></span>
+            <span className="pd-tx"><b>Maintenance Notes</b><span>shift notes → KA</span></span>
           </div>
         </div>
 

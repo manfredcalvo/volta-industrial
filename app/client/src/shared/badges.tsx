@@ -1,39 +1,56 @@
 /**
- * Small pill-style badges reused across the Operations page + home activity
- * feed. If you add a new status or tier, update both the type union in
- * shared/types.ts and the colour map here.
+ * Small pill-style badges reused across the Operations page + home
+ * activity feed. If you add a new status or action, update both the type
+ * union in shared/types.ts and the colour map here.
  */
-import type { ReturnStatus } from './types';
+import type { LineStatus, MaintenanceAction } from './types';
 
-export function StatusBadge({ status }: { status: ReturnStatus }) {
-  const styles: Record<ReturnStatus, string> = {
-    pending: 'bg-muted text-foreground',
-    approved: 'bg-[var(--success-subtle)] text-[var(--success-subtle-foreground)]',
-    rejected: 'bg-muted text-muted-foreground',
-    escalated: 'bg-[var(--warning-subtle)] text-[var(--warning-subtle-foreground)]',
+const STATUS_LABEL: Record<LineStatus, string> = {
+  healthy: 'healthy',
+  at_risk: 'at risk',
+  critical: 'critical',
+};
+
+export function StatusBadge({ status }: { status: LineStatus }) {
+  const styles: Record<LineStatus, string> = {
+    healthy:
+      'bg-[var(--success-subtle)] text-[var(--success-subtle-foreground)]',
+    at_risk:
+      'bg-[var(--warning-subtle)] text-[var(--warning-subtle-foreground)]',
+    critical: 'bg-destructive/15 text-destructive',
   };
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}
     >
-      {status}
+      {STATUS_LABEL[status]}
     </span>
   );
 }
 
-export function TierBadge({ tier }: { tier: string }) {
-  const styles: Record<string, string> = {
-    gold: 'bg-[var(--tier-gold)] text-[var(--tier-gold-foreground)]',
-    silver: 'bg-[var(--tier-silver)] text-[var(--tier-silver-foreground)]',
-    bronze: 'bg-[var(--tier-bronze)] text-[var(--tier-bronze-foreground)]',
-    platinum: 'bg-[var(--tier-platinum)] text-[var(--tier-platinum-foreground)]',
+const ACTION_LABEL: Record<MaintenanceAction, string> = {
+  pull_now: 'Pull now',
+  run_to_shift_end: 'Run to shift end',
+  expedite_parts_and_run: 'Expedite parts',
+};
+
+export function ActionBadge({ action }: { action: MaintenanceAction }) {
+  const styles: Record<MaintenanceAction, string> = {
+    pull_now: 'bg-destructive/15 text-destructive',
+    run_to_shift_end: 'bg-muted text-foreground',
+    expedite_parts_and_run:
+      'bg-[var(--warning-subtle)] text-[var(--warning-subtle-foreground)]',
   };
-  const cls = styles[tier.toLowerCase()] ?? 'bg-muted text-muted-foreground';
   return (
     <span
-      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${cls}`}
+      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${styles[action]}`}
     >
-      {tier}
+      {ACTION_LABEL[action]}
     </span>
   );
+}
+
+/** Human label for a maintenance action, reused in prose contexts. */
+export function actionLabel(action: MaintenanceAction): string {
+  return ACTION_LABEL[action];
 }

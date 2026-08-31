@@ -170,7 +170,10 @@ resources:
         - name: postgres
           postgres:
             branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
-            database: databricks_postgres
+            # `database` must be the full DB resource path, not the bare PG
+            # database name. Note the resource id is `databricks-postgres`
+            # (hyphen) even though the Postgres database is `databricks_postgres`.
+            database: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production/databases/databricks-postgres
             permission: CAN_CONNECT_AND_CREATE
 
 # Build the app locally before deploy (npm install + drizzle generate + tsdown/vite build).

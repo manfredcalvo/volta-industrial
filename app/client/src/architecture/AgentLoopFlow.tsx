@@ -4,7 +4,7 @@
  * plan with a human-in-the-loop checkpoint:
  *
  *   Operator → [ ANALYSIS box: Agent Bricks · Genie · Lakebase ]
- *            → Propose action → fork{ Send email, Approve refunds }
+ *            → Propose action → fork{ Draft work order, Cut work order }
  *   ──────── governed by Unity Catalog · AI Gateway ────────
  *
  * Purely visual — no live state. Tiles use the shared <Stage> primitive at
@@ -129,9 +129,8 @@ export function AgentLoopFlow() {
       <p className="text-sm text-muted-foreground leading-relaxed mb-5">
         The agent doesn't just diagnose — it{' '}
         <span className="font-medium text-foreground">takes the action</span>.
-        Genie queries the data, you approve the plan, then the agent sends the
-        apology emails and files the refunds, updating Lakebase live. One
-        conversation, end to end.
+        Genie queries the data, you approve the plan, then the agent drafts the
+        work order and writes it to Lakebase live. One conversation, end to end.
       </p>
 
       {/* the loop — desktop */}
@@ -169,8 +168,8 @@ export function AgentLoopFlow() {
           className="flex flex-col"
           style={{ height: 130, justifyContent: 'space-between', flexShrink: 0 }}
         >
-          <Stage tileSize={50} iconSize={32} icon={<SendIcon />} name="Send email" />
-          <Stage tileSize={50} iconSize={32} icon={<LakebaseIcon />} name="Approve refunds" sub="update Lakebase" />
+          <Stage tileSize={50} iconSize={32} icon={<SendIcon />} name="Draft work order" />
+          <Stage tileSize={50} iconSize={32} icon={<LakebaseIcon />} name="Cut work order" sub="write to Lakebase" />
         </div>
       </div>
 
@@ -184,8 +183,8 @@ export function AgentLoopFlow() {
           <MiniTile icon={<LakebaseIcon />} label="Lakebase · queries the data" />
         </li>
         <MobileStep icon={<ProposeIcon />} label="Propose action" sub="human approves" />
-        <MobileStep icon={<SendIcon />} label="Send email" />
-        <MobileStep icon={<LakebaseIcon />} label="Approve refunds" sub="update Lakebase" />
+        <MobileStep icon={<SendIcon />} label="Draft work order" />
+        <MobileStep icon={<LakebaseIcon />} label="Cut work order" sub="write to Lakebase" />
       </ol>
 
       {/* governed strip */}
