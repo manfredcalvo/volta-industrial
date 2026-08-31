@@ -10,7 +10,7 @@
  */
 import type { Request } from 'express';
 import { getExecutionContext } from '@databricks/appkit';
-import { authHeaders } from './auth.js';
+import { serviceAuthHeaders } from './auth.js';
 export async function ensureMlflowExperiment(
   host: string,
   experimentPath: string,
@@ -103,10 +103,14 @@ export async function postMlflowAssessment(args: {
   value: 'up' | 'down';
   rationale?: string;
 }): Promise<string | null> {
-  const { req, host, traceId, userEmail, value, rationale } = args;
+  // `req` is accepted for API compatibility but no longer used: the
+  // assessment POST authenticates as the app SP (serviceAuthHeaders), like
+  // every other agent-side Databricks call. The HUMAN source_id in the body
+  // still attributes the feedback to userEmail.
+  const { host, traceId, userEmail, value, rationale } = args;
   try {
     const base = host.replace(/\/$/, '');
-    const headers = await authHeaders(req);
+    const headers = await serviceAuthHeaders();
     headers.set('Content-Type', 'application/json');
     const url = `${base}/api/2.0/mlflow/traces/${traceId}/assessments`;
     const resp = await fetch(url, {

@@ -689,6 +689,12 @@ void (async () => {
         ? 'https://us-east-1.storage.cloud.databricks.com/'
         : '';
       if (!probeHost) return;
+      // Log egress-proxy env: if the container requires an HTTP(S) proxy for
+      // outbound and mlflow-tracing's raw global fetch doesn't honor it, that
+      // (not a hard firewall) would explain the storage-host ECONNREFUSED.
+      console.log(
+        `[boot] egress env: HTTPS_PROXY=${process.env.HTTPS_PROXY ?? process.env.https_proxy ?? '(unset)'} HTTP_PROXY=${process.env.HTTP_PROXY ?? process.env.http_proxy ?? '(unset)'} NO_PROXY=${process.env.NO_PROXY ?? process.env.no_proxy ?? '(unset)'} NODE_USE_ENV_PROXY=${process.env.NODE_USE_ENV_PROXY ?? '(unset)'} node=${process.version}`,
+      );
       try {
         const r = await fetch(probeHost, {
           method: 'HEAD',
