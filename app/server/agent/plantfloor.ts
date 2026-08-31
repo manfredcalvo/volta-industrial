@@ -49,7 +49,7 @@ import {
   worstAtriskLine,
   getLineStatus,
   getRecommendation,
-  searchParts,
+  searchParts as searchPartsQuery,
   recordMaintenanceAction,
 } from '../db/queries/maintenance.js';
 // Data-backend helpers. Both are config-driven and share the same
@@ -243,7 +243,7 @@ function makeTools(ctx: AgentContext): Tool[] {
     execute: async ({ query }) =>
       mlflow.withSpan(
         async () => {
-          const matches = await searchParts(ctx.db, query);
+          const matches = await searchPartsQuery(ctx.db, query);
           if (matches.length === 0) {
             return { matches_found: false, note: 'No matching parts found.' };
           }
