@@ -1,0 +1,90 @@
+{
+  "prompt": "Search the parts catalog for a bearing seal / coupling for LINE-0928. List the top candidate parts with whether they're in local stock and the lead time.",
+  "conversation_id": "6e8aff4a-45c3-41bb-8eb3-c22a08f6c454",
+  "tool": "search_parts",
+  "retrieves_from": "Build-1 Lakebase Search index: dev_manffred_calvosanchez_volta_industrial.parts_search (parts_search_bm25 lakebase_bm25 index) \u2014 NOT a separate app-owned store",
+  "tool_call": {
+    "type": "function_call",
+    "call_id": "call_7wqGBoc1sYjnwOgSpFujMeiT",
+    "name": "search_parts",
+    "arguments": "{\"query\":\"bearing seal coupling\"}"
+  },
+  "tool_output": "{\"type\":\"text\",\"text\":\"{\\\"matches_found\\\":true,\\\"candidates\\\":[{\\\"part_id\\\":\\\"PART-00091\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":3},{\\\"part_id\\\":\\\"PART-00566\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":14},{\\\"part_id\\\":\\\"PART-00343\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":16},{\\\"part_id\\\":\\\"PART-00157\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":10},{\\\"part_id\\\":\\\"PART-00759\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":2},{\\\"part_id\\\":\\\"PART-00312\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":17},{\\\"part_id\\\":\\\"PART-00528\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":6},{\\\"part_id\\\":\\\"PART-00529\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":15},{\\\"part_id\\\":\\\"PART-00193\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":10},{\\\"part_id\\\":\\\"PART-00270\\\",\\\"part_name\\\":\\\"bearing Grinder\\\",\\\"part_category\\\":\\\"bearing\\\",\\\"part_local\\\":true,\\\"lead_time_days\\\":1}]}\"}",
+  "assistant_final_answer": "10 matches. Top catalog candidates for a bearing seal / coupling search for **LINE-0928** are below \u0014 note these are **catalog matches, not yet confirmed as the exact fitted part for the line**.\n\n| Part ID | Part Name | Category | Local Stock | Lead Time |\n|---|---|---:|---:|---:|\n| PART-00091 | bearing Grinder | bearing | Yes | 3 days |\n| PART-00566 | bearing Grinder | bearing | Yes | 14 days |\n| PART-00343 | bearing Grinder | bearing | Yes | 16 days |\n| PART-00157 | bearing Grinder | bearing | Yes | 10 days |\n| PART-00759 | bearing Grinder | bearing | Yes | 2 days |\n| PART-00312 | bearing Grinder | bearing | Yes | 17 days |\n| PART-00528 | bearing Grinder | bearing | Yes | 6 days |\n| PART-00529 | bearing Grinder | bearing | Yes | 15 days |\n| PART-00193 | bearing Grinder | bearing | Yes | 10 days |\n| PART-00270 | bearing Grinder | bearing | Yes | 1 day |\n\nFastest local options:\n- **PART-00270** \u0014 1 day\n- **PART-00759** \u0014 2 days\n- **PART-00091** \u0014 3 days\n\nIf you want, I can next **identify the actual candidate part for LINE-0928** and tell you whether the line should be pulled, run to shift end, or kept running with an expedite.",
+  "tool_output_parsed": {
+    "matches_found": true,
+    "candidates": [
+      {
+        "part_id": "PART-00091",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 3
+      },
+      {
+        "part_id": "PART-00566",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 14
+      },
+      {
+        "part_id": "PART-00343",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 16
+      },
+      {
+        "part_id": "PART-00157",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 10
+      },
+      {
+        "part_id": "PART-00759",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 2
+      },
+      {
+        "part_id": "PART-00312",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 17
+      },
+      {
+        "part_id": "PART-00528",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 6
+      },
+      {
+        "part_id": "PART-00529",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 15
+      },
+      {
+        "part_id": "PART-00193",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 10
+      },
+      {
+        "part_id": "PART-00270",
+        "part_name": "bearing Grinder",
+        "part_category": "bearing",
+        "part_local": true,
+        "lead_time_days": 1
+      }
+    ]
+  },
+  "query": "bearing seal coupling"
+}

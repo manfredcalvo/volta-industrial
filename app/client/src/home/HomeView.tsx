@@ -1,17 +1,15 @@
 /**
  * Home / landing page.
  *
- * Template concern: this is where you tell the STORY of the use case.
- * The narrative pieces (hero persona, headline, situation, goal, journey
- * diagram quotes, starter prompts, featured action) are hardcoded in this
- * file as an EXAMPLE — rewrite them for your demo. Only `assistantScript`
- * and `branding` stay config-driven (script chain is reused by the chat
- * dock; branding is also read by the shell header).
+ * Tells the STORY of the use case. The narrative pieces (hero persona,
+ * headline, situation, goal, journey quotes, starter prompts, featured
+ * action) are hardcoded here. Only `assistantScript` and `branding` stay
+ * config-driven (the script chain is reused by the chat dock; branding is
+ * also read by the shell header).
  *
  * The journey diagram's 4 cards wire into the floating chat dock via
- * `dockController` (pub/sub in `chat/dockController.ts`) — clicking a card
- * either navigates somewhere, opens the dock, or opens the dock and
- * auto-sends a scripted prompt. That's the "see the demo in action" path.
+ * `dockController` — clicking a card navigates, opens the dock, or opens
+ * it and auto-sends a scripted prompt. That's the "see it in action" path.
  */
 import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -21,48 +19,44 @@ import {
   Brain,
   CheckCircle2,
   Eye,
-  Mail,
   MessageCircleQuestion,
   Sparkles,
   Wrench,
   Zap,
 } from 'lucide-react';
 import { useSession, type ScriptStep } from '@/lib/api';
-import { fetchActivity } from '@/lib/returns';
+import { fetchActivity } from '@/lib/lines';
 import type { ActivityEvent } from '@/shared/types';
 import { dataMutated } from '@/lib/events';
 import { dockController } from '@/chat/dockController';
 import { AgentLoopFlow } from '@/architecture/AgentLoopFlow';
+import { actionLabel } from '@/shared/badges';
 
 // ---------------------------------------------------------------------------
-// Narrative — REPLACE for your demo.
-// This is what the landing page shows. Hero persona, headline, situation,
-// starter prompts, and the "featured action" are the story hooks that tell
-// the viewer what this app does. Rewrite these to match your use case.
+// Narrative
 // ---------------------------------------------------------------------------
 
 const HERO = {
-  name: 'Claire Dubois',
-  role: 'VP of Operations',
+  name: 'Dana Okafor',
+  role: 'Plant Operations Lead',
 };
 
 const STORY = {
-  headline: "Returns are running 3x normal — and we don't know why.",
+  headline: 'A critical line is trending toward an unplanned stop.',
   situation:
-    "Three weeks ago returns jumped from ~$60K/week to $180K, driven by three skincare SKUs with a 30% return rate. They're still elevated at ~$80K. Revenue looks fine, orders look fine — but the refunds line is eating the quarter.",
-  goal: 'Find the root cause, confirm the blast radius, and decide on a recall or field fix.',
+    "Vibration and temperature on LINE-04 have been climbing for three shifts. The failure-risk model has it in the critical band, with roughly $3.5M of downtime exposure across the at-risk fleet. Nothing has failed yet — but the window to act cheaply is closing.",
+  goal: 'Find what is driving the risk, weigh pull-now vs. run-to-shift-end vs. expedite-the-part, and cut a work order before the line goes down.',
 };
 
 const STARTER_QUESTIONS = [
-  'Why do I have so many returns?',
-  'Was there an incident for that lot?',
-  'Which of the affected customers are premium (CS-tagged or model-found)?',
+  'Why is LINE-04 trending toward a stop, and what are my options?',
+  'Which lines are in the critical band right now?',
+  'Do we have the part in local stock, or do we need to expedite it?',
 ];
 
-// The featured action's copy is inlined in the JSX below — the section is just
-// HTML, edit it freely. The prompt text is the single thing the agent runs.
+// The featured action's prompt runs the full investigate → rank → act arc.
 const FEATURED_ACTION_PROMPT =
-  "Something is off with our returns right now. Find the worst production lot, then use the premium classifier to split the affected customers — CS-tagged premium PLUS the hidden premiums the model surfaces — from the standard cohort. Draft two apology email templates: a 20% personal apology for premium, a 5% goodwill for standard. Show me both, including the count of CS-tagged vs model-found premiums, before sending. Wait for my approval. Once I say go, email everyone with their tier's coupon and approve all the refunds.";
+  "Something is off with LINE-04. Find the worst at-risk line, explain what's driving the failure risk using the plant data, then rank the maintenance actions with the model — pull now, run to shift end, or expedite the part — and show me the net value of each. Check whether the needed part is in local stock. Recommend the best action and wait for my approval. Once I say go, cut the work order.";
 
 export function HomeView() {
   const { config, configError, retry: retrySession } = useSession();
@@ -70,12 +64,12 @@ export function HomeView() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Activity feed errors are non-fatal (feed silently empty). Logged for
-    // dev debugging; the page still renders the story without it.
     const reload = () =>
-      fetchActivity(20).then(setActivity).catch((e) => {
-        console.error('[home] activity feed failed', e);
-      });
+      fetchActivity(20)
+        .then(setActivity)
+        .catch((e) => {
+          console.error('[home] activity feed failed', e);
+        });
     void reload();
     return dataMutated.subscribe(reload);
   }, []);
@@ -136,7 +130,7 @@ export function HomeView() {
         {/* Persona journey diagram */}
         <section className="space-y-5">
           <div className="hidden sm:block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            A week of work · before noon
+            A shift's work · before the line goes down
           </div>
           <JourneyDiagram heroName={heroFirstName} script={config.assistantScript} />
 
@@ -163,7 +157,7 @@ export function HomeView() {
           </div>
         </section>
 
-        {/* Featured action — climax. Inline the copy; edit this HTML freely. */}
+        {/* Featured action — climax. */}
         <section>
           <div
             className="rounded-2xl p-7 relative overflow-hidden"
@@ -183,20 +177,19 @@ export function HomeView() {
                 Let the assistant handle it
               </div>
               <h3 className="display text-2xl font-semibold mb-2 leading-tight">
-                Handle the bad-lot returns — tier the offer by premium status
+                Investigate LINE-04, rank the actions, cut the work order
               </h3>
               <p className="hidden sm:block text-sm opacity-85 leading-relaxed mb-5 max-w-2xl">
-                The assistant traces the spike to one lot, then asks the
-                premium classifier which of the affected customers your CS
-                team has tagged AND which hidden premiums the model has
-                surfaced (untagged customers who look just like the tagged
-                ones). It drafts two apology emails (20% personal apology
-                for premium, 5% goodwill for the rest), and waits for your
-                approval before anything goes out.
+                The assistant pulls the failure signals for the worst at-risk
+                line, explains what's driving the risk, then asks the model to
+                rank pull-now vs. run-to-shift-end vs. expedite-the-part by net
+                value — checking whether the part is in local stock. It
+                recommends the best action and waits for your approval before
+                cutting a work order.
               </p>
               <p className="sm:hidden text-sm opacity-85 leading-relaxed mb-5">
-                Trace the spike, tier the offer (premium vs. rest), draft
-                the apology emails — approve before anything goes out.
+                Investigate the worst line, rank the actions by net value,
+                approve — then it cuts the work order.
               </p>
               <button
                 onClick={() => dockController.newAndSend(FEATURED_ACTION_PROMPT)}
@@ -216,7 +209,7 @@ export function HomeView() {
             </div>
             <ActivityFeed
               events={activity}
-              onJumpToReturn={(id) => navigate(`/operations?return=${id}`)}
+              onJumpToLine={() => navigate('/operations')}
             />
           </section>
         )}
@@ -227,15 +220,6 @@ export function HomeView() {
 
 // --- Journey diagram -------------------------------------------------------
 
-/**
- * Four-step narrative. Each step is clickable and fires the demo:
- *   - "Claire operates"    → navigate to Operations page
- *   - "She asks"           → open dock, auto-send "Why so many returns?"
- *   - "AI investigates"    → open dock (shows the investigation in progress)
- *   - "AI takes action"    → open dock, auto-send the final "send it" prompt
- *
- * `script` comes from config — the handlers pull the matching prompts.
- */
 function JourneyDiagram({
   heroName,
   script,
@@ -251,15 +235,15 @@ function JourneyDiagram({
   const steps = [
     {
       icon: <Eye className="size-5" />,
-      role: `${heroName} operates`,
-      quote: '"Returns are everywhere — my dashboard lit up."',
+      role: `${heroName} watches`,
+      quote: '"LINE-04 has been climbing all shift — the board is red."',
       highlight: false,
       onClick: () => navigate('/operations'),
     },
     {
       icon: <MessageCircleQuestion className="size-5" />,
       role: 'She asks',
-      quote: '"Why do I have so many returns?"',
+      quote: '"Why is LINE-04 trending toward a stop?"',
       highlight: false,
       onClick: () =>
         step0
@@ -269,18 +253,16 @@ function JourneyDiagram({
     {
       icon: <Brain className="size-5" />,
       role: 'AI investigates',
-      quote: '"A bad production batch at one facility. 3 SKUs. Quality issue on the line."',
+      quote: '"Vibration + heat rising. Bearing part is local. Ranked actions by net value."',
       highlight: true,
       onClick: () => dockController.open(),
     },
     {
       icon: <Wrench className="size-5" />,
       role: 'AI takes action',
-      quote: '"Found the hidden premiums. Drafted both emails. Sent."',
+      quote: '"Pull now beats running it out. Work order cut on approval."',
       highlight: true,
       onClick: () => {
-        // Fire step-1 (accept + draft). If user is mid-chain the dock will
-        // still open; they can then click "Yes — send it" from the chip.
         if (step1) dockController.openAndSend(step1.prompt);
         else if (step2) dockController.openAndSend(step2.prompt);
         else dockController.open();
@@ -311,11 +293,8 @@ function JourneyDiagram({
         ))}
       </div>
 
-      {/* Phone: vertical rail of icons on the left (sequential-flow cue),
-          card per step on the right. */}
+      {/* Phone: vertical rail of icons on the left, card per step on the right. */}
       <ol className="md:hidden relative flex flex-col gap-2.5">
-        {/* Vertical rail behind the icon column — starts just under
-            step-1's icon and ends just above step-N's. */}
         <div
           aria-hidden
           className="absolute left-[18px] top-7 bottom-7 w-px bg-border"
@@ -338,9 +317,6 @@ function JourneyDiagram({
 }
 
 // --- Journey step primitives ------------------------------------------------
-// Shared between the desktop grid + the mobile rail. Owning the highlight
-// styling here means a tweak to "what does highlighted look like" lands
-// in one place instead of two.
 
 type JourneyStep = {
   icon: React.ReactNode;
@@ -369,7 +345,6 @@ function StepIcon({
   size: 'sm' | 'md';
   className?: string;
 }) {
-  // Literal Tailwind classes so the JIT picks them up at build time.
   const sizeClass = size === 'sm' ? 'size-8' : 'size-9';
   return (
     <div
@@ -405,21 +380,37 @@ function StepText({ step, compact = false }: { step: JourneyStep; compact?: bool
 
 function ActivityFeed({
   events,
-  onJumpToReturn,
+  onJumpToLine,
 }: {
   events: ActivityEvent[];
-  onJumpToReturn: (returnId: string) => void;
+  onJumpToLine: (lineId: string) => void;
 }) {
   return (
     <ul className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-      {events.map((e, i) => (
-        <li
-          key={i}
-          className="px-4 py-3 flex items-start gap-3 text-sm"
-        >
-          <ActivityIcon kind={e.kind} />
+      {events.map((e) => (
+        <li key={e.workOrderId} className="px-4 py-3 flex items-start gap-3 text-sm">
+          <div className="size-7 rounded-full flex items-center justify-center shrink-0 bg-[var(--success-subtle)] text-[var(--success-subtle-foreground)]">
+            <CheckCircle2 className="size-3.5" />
+          </div>
           <div className="flex-1 min-w-0">
-            <ActivityBody event={e} onJumpToReturn={onJumpToReturn} />
+            <div className="text-foreground">
+              <span className="font-medium capitalize">{e.action}</span>{' '}
+              <span className="text-muted-foreground">
+                {actionLabel(e.actionType)}
+              </span>{' '}
+              on <span className="font-mono text-xs">{e.lineId}</span>
+              {e.by && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  by {e.by}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => onJumpToLine(e.lineId)}
+              className="mt-0.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              View line →
+            </button>
           </div>
           <div className="text-xs text-muted-foreground shrink-0">
             {relativeTime(e.at)}
@@ -427,64 +418,6 @@ function ActivityFeed({
         </li>
       ))}
     </ul>
-  );
-}
-
-function ActivityIcon({ kind }: { kind: ActivityEvent['kind'] }) {
-  const Icon = kind === 'email' ? Mail : CheckCircle2;
-  const bg =
-    kind === 'email'
-      ? 'bg-[var(--info-subtle)] text-[var(--info-subtle-foreground)]'
-      : 'bg-[var(--success-subtle)] text-[var(--success-subtle-foreground)]';
-  return (
-    <div
-      className={`size-7 rounded-full flex items-center justify-center shrink-0 ${bg}`}
-    >
-      <Icon className="size-3.5" />
-    </div>
-  );
-}
-
-function ActivityBody({
-  event,
-  onJumpToReturn,
-}: {
-  event: ActivityEvent;
-  onJumpToReturn: (returnId: string) => void;
-}) {
-  if (event.kind === 'email') {
-    return (
-      <>
-        <div className="text-foreground truncate">
-          <span className="font-medium">Email</span> to{' '}
-          <span className="text-muted-foreground">{event.to ?? '—'}</span>:{' '}
-          <span className="text-muted-foreground">"{event.subject}"</span>
-        </div>
-        <button
-          onClick={() => onJumpToReturn(event.return_id)}
-          className="mt-0.5 text-xs text-muted-foreground hover:text-foreground"
-        >
-          View return →
-        </button>
-      </>
-    );
-  }
-  return (
-    <>
-      <div className="text-foreground">
-        <span className="font-medium capitalize">{event.action}</span>
-        {event.notes && (
-          <span className="text-muted-foreground"> · {event.notes}</span>
-        )}
-        <span className="text-xs text-muted-foreground ml-2">by {event.by}</span>
-      </div>
-      <button
-        onClick={() => onJumpToReturn(event.return_id)}
-        className="mt-0.5 text-xs text-muted-foreground hover:text-foreground"
-      >
-        View return →
-      </button>
-    </>
   );
 }
 

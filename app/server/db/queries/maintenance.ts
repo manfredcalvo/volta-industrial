@@ -135,9 +135,25 @@ export async function getRecommendation(
   };
 }
 
+// The Build-1 Lakebase Search index lives in the shared synced-tables schema
+// (default the dev schema; overridable). It is NOT the app-owned app.* store:
+// `<schema>.parts_search` carries a BM25 tsvector (`body_tsv`, indexed by
+// `parts_search_bm25` USING lakebase_bm25) + a vector(1024) (`embedding`,
+// indexed by `parts_search_ann` USING lakebase_ann), built in Build 1's
+// lakebase_search_setup.sql. search_parts retrieves from THAT index rather than
+// maintaining a separate store.
+const SEARCH_SCHEMA =
+  process.env.LAKEBASE_SEARCH_SCHEMA ||
+  process.env.DEMO_SCHEMA ||
+  'dev_manffred_calvosanchez_volta_industrial';
+
 /**
- * Lakebase Search over the parts catalog (app.parts) — full-text over
- * part name + description, ranked by relevance. Returns the top matches.
+ * Lakebase Search over the parts catalog — BM25 keyword retrieval against the
+ * SHARED Build-1 Lakebase Search index (`<schema>.parts_search`, via the
+ * `parts_search_bm25` lakebase_bm25 index). Returns the top matches. This is
+ * the same index built in Build 1 (which also carries the lakebase_ann vector
+ * index for hybrid RRF); the app reads from it, it does NOT build a separate
+ * store.
  */
 export async function searchParts(
   db: AppDb,
@@ -159,26 +175,34 @@ export async function searchParts(
     part_local: z.boolean(),
     lead_time_days: z.number().nullish(),
   });
-  const runFts = async () =>
+  // SEARCH_SCHEMA comes from trusted env (not user input) → safe to inline as
+  // an identifier / index-name literal. The query text is a bound parameter.
+  const tbl = sql.raw(`"${SEARCH_SCHEMA}".parts_search`);
+  const bm25Index = sql.raw(`'${SEARCH_SCHEMA}.parts_search_bm25'`);
+  // BM25 keyword retrieval via the lakebase_bm25 index on parts_search.body_tsv.
+  const runBm25 = async () =>
     db.execute(sql`
-      SELECT part_id, part_name, part_category, part_local, lead_time_days
-      FROM app.parts
-      WHERE to_tsvector('english', coalesce(part_name, '') || ' ' || coalesce(description, ''))
-            @@ websearch_to_tsquery('english', ${query})
-      ORDER BY ts_rank(
-        to_tsvector('english', coalesce(part_name, '') || ' ' || coalesce(description, '')),
-        websearch_to_tsquery('english', ${query})
-      ) DESC
+      SELECT part_id, part_name, part_type AS part_category, part_local, lead_time_days
+      FROM ${tbl}
+      ORDER BY body_tsv <@> to_bm25query(to_tsvector('english', ${query}), ${bm25Index})
       LIMIT 10`);
-  const runIlike = async () =>
+  // Fallback: rank on the same Build-1 index table's tsvector (still the shared
+  // parts_search index, never the app.* store) if the bm25 operator is
+  // unavailable.
+  const runTsRank = async () =>
     db.execute(sql`
-      SELECT part_id, part_name, part_category, part_local, lead_time_days
-      FROM app.parts
-      WHERE part_name ILIKE ${'%' + query + '%'} OR description ILIKE ${'%' + query + '%'}
+      SELECT part_id, part_name, part_type AS part_category, part_local, lead_time_days
+      FROM ${tbl}
+      WHERE body_tsv @@ websearch_to_tsquery('english', ${query})
+      ORDER BY ts_rank(body_tsv, websearch_to_tsquery('english', ${query})) DESC
       LIMIT 10`);
 
-  let res = await runFts();
-  if (res.rows.length === 0) res = await runIlike();
+  let res;
+  try {
+    res = await runBm25();
+  } catch {
+    res = await runTsRank();
+  }
   return z
     .array(rowSchema)
     .parse(res.rows)

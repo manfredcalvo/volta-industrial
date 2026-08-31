@@ -157,9 +157,9 @@ export function AppHeader() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset the demo with Lakebase Branching</AlertDialogTitle>
             <AlertDialogDescription>
-              You just played the demo — refunds were approved, emails went out, the
-              audit trail filled up. To run it again from the top, we need a clean
-              slate. Lakebase branching makes that one click.
+              You just played the demo — work orders were cut, the audit trail
+              filled up. To run it again from the top, we need a clean slate.
+              Lakebase branching makes that one click.
             </AlertDialogDescription>
           </AlertDialogHeader>
 

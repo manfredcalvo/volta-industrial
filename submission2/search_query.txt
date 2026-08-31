@@ -1,0 +1,6 @@
+Natural-language query (app search_parts tool): "bearing seal coupling"
+
+Retrieved from the Build-1 Lakebase Search index
+  dev_manffred_calvosanchez_volta_industrial.parts_search  →  parts_search_bm25 (lakebase_bm25) keyword retrieval
+  (the same index built in Build 1; parts_search_ann/lakebase_ann vector index is also present).
+The app reads this shared index — it does NOT maintain a separate store (app.parts).

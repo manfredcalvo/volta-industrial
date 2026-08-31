@@ -79,6 +79,7 @@ import { registerConfigRoutes } from './routes/config.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerChartRoutes } from './routes/charts.js';
+import { registerLinesRoutes } from './routes/lines.js';
 import { registerDevLogRoutes } from './routes/dev-log.js';
 
 // ============================================================================
@@ -490,11 +491,9 @@ await createApp({
       agentModel: appConfig.agentModel,
     },
   });
-  // Legacy returns/activity routes — not used in Volta Plant Floor demo.
-  // Trainees build domain-specific routes as needed. Stub imports kept to prevent
-  // accidental use; registrations commented out.
-  // registerReturnsRoutes(app, { db });
-  // registerActivityRoutes(app, { db });
+  // Operations endpoints — line queue, detail drawer, plant rollups, and
+  // the activity feed, all over the Lakebase app.* mirror.
+  registerLinesRoutes(app, { db });
   registerAdminRoutes(app, { db, data: appConfig.data });
 
   // Analytics charts — custom route that substitutes catalog/schema into the
@@ -555,6 +554,15 @@ function startBackgroundInit() {
 // but defer mlflow.init() until after sync — otherwise the SDK instruments
 // sync queries that have no parent span and produces noisy warnings.
 const mlflowIdPromise = (async () => {
+  // Precedence 0: the experiment bound as an app resource (valueFrom:
+  // experiment → MLFLOW_EXPERIMENT_ID). The bundle grants the app SP CAN_EDIT
+  // on it, so the OAuth-only exporter can write traces without a get/create
+  // round-trip — and this is the id we KNOW the SP has access to.
+  const boundId = (process.env.MLFLOW_EXPERIMENT_ID ?? '').trim();
+  if (boundId) {
+    console.log(`[boot +${ms()}] MLflow experiment from app resource (id=${boundId})`);
+    return boundId;
+  }
   // Resolve the experiment path with a self-derived fallback so tracing works
   // out of the box on EVERY deploy path — no env plumbing required. Precedence:
   //   1. explicit `agentMlflowExperimentPath` (from AGENT_MLFLOW_EXPERIMENT_PATH)
@@ -626,36 +634,80 @@ void (async () => {
   // Now safe to enable tracing — sync queries are done.
   agentExperimentId = await mlflowIdPromise;
   if (agentExperimentId) {
-    // Make the mlflow-tracing exporter use the SAME auth as the app's working
-    // client. `mlflow.init({trackingUri:'databricks'})` builds its own bundled
-    // @databricks/sdk-experimental Config, which resolves the DEFAULT
-    // ~/.databrickscfg and IGNORES the DATABRICKS_CONFIG_FILE that appkit's
-    // client is wired to — so it gets no token and every trace upload throws
-    // "cannot configure default credentials". `init` accepts explicit `host` +
-    // `databricksToken` overrides, so we pass the bearer the app client already
-    // resolves (project token in preview, SP/OBO in deploy). We read the token
-    // from the AUTHENTICATED header, not config.token, so it works whether the
-    // profile is PAT or OAuth (OAuth tokens only materialize during
-    // authenticate()). Graceful: on any failure, fall back to the default init.
+    // Auth for the mlflow-tracing exporter (its bundled @databricks/sdk-
+    // experimental Config resolves independently of appkit's client).
+    //
+    // In the Apps container the platform injects OAuth m2m env creds
+    // (DATABRICKS_CLIENT_ID/SECRET + DATABRICKS_HOST). If we ALSO pass an
+    // explicit `databricksToken`, the SDK sees two auth methods and throws
+    // "more than one authorization method configured: oauth and pat" on every
+    // export. So when OAuth env creds are present, pass NEITHER host nor token
+    // and let the exporter authenticate via OAuth alone — the SP has CAN_EDIT
+    // on the bound experiment resource, so trace writes succeed. Only in
+    // dev/PAT (no OAuth env) do we resolve + pass an explicit bearer, which is
+    // what makes tracing work there without a ~/.databrickscfg default profile.
+    const hasOauthEnv = !!(
+      process.env.DATABRICKS_CLIENT_ID && process.env.DATABRICKS_CLIENT_SECRET
+    );
     let mlflowHost: string | undefined;
     let mlflowToken: string | undefined;
-    try {
-      const { client } = getExecutionContext();
-      const h = new Headers();
-      await client.config.authenticate(h);
-      mlflowToken = /^Bearer\s+(.+)$/i.exec(h.get('Authorization') ?? '')?.[1];
-      mlflowHost = (client.config as { host?: string }).host
-        ?? process.env.DATABRICKS_HOST;
-    } catch (e) {
-      console.warn('[boot] could not resolve MLflow exporter auth from the app client — trace upload may fail:', (e as Error).message);
+    if (!hasOauthEnv) {
+      try {
+        const { client } = getExecutionContext();
+        const h = new Headers();
+        await client.config.authenticate(h);
+        mlflowToken = /^Bearer\s+(.+)$/i.exec(h.get('Authorization') ?? '')?.[1];
+        mlflowHost = (client.config as { host?: string }).host
+          ?? process.env.DATABRICKS_HOST;
+      } catch (e) {
+        console.warn('[boot] could not resolve MLflow exporter auth from the app client — trace upload may fail:', (e as Error).message);
+      }
     }
 
     mlflow.init({
       trackingUri: 'databricks',
       experimentId: agentExperimentId,
-      ...(mlflowHost && mlflowToken ? { host: mlflowHost, databricksToken: mlflowToken } : {}),
+      ...(!hasOauthEnv && mlflowHost && mlflowToken
+        ? { host: mlflowHost, databricksToken: mlflowToken }
+        : {}),
     });
-    console.log(`[boot +${ms()}] MLflow tracing active`);
+    console.log(
+      `[boot +${ms()}] MLflow tracing active (${hasOauthEnv ? 'OAuth m2m' : 'explicit token'})`,
+    );
+
+    // One-time connectivity probe to the MLflow trace-DATA storage host.
+    // Trace INFO uploads via the control-plane API (works), but trace DATA
+    // (spans) PUTs to a presigned URL on *.storage.cloud.databricks.com. If
+    // that upload fails with a bare "fetch failed" (see mlflow-tracing's
+    // clients/artifacts/databricks.js), the real reason is in error.cause —
+    // which the library swallows. Probe the host and log the exact cause
+    // (DNS ENOTFOUND / ECONNREFUSED / timeout / TLS) so the remedy (Apps
+    // egress allowlist, etc.) is unambiguous. A 403 from the bare HEAD means
+    // the host IS reachable (no signature) — that's a PASS for connectivity.
+    void (async () => {
+      const probeHost = (process.env.DATABRICKS_HOST ?? '').includes('.cloud.databricks.com')
+        ? 'https://us-east-1.storage.cloud.databricks.com/'
+        : '';
+      if (!probeHost) return;
+      // Log egress-proxy env: if the container requires an HTTP(S) proxy for
+      // outbound and mlflow-tracing's raw global fetch doesn't honor it, that
+      // (not a hard firewall) would explain the storage-host ECONNREFUSED.
+      console.log(
+        `[boot] egress env: HTTPS_PROXY=${process.env.HTTPS_PROXY ?? process.env.https_proxy ?? '(unset)'} HTTP_PROXY=${process.env.HTTP_PROXY ?? process.env.http_proxy ?? '(unset)'} NO_PROXY=${process.env.NO_PROXY ?? process.env.no_proxy ?? '(unset)'} NODE_USE_ENV_PROXY=${process.env.NODE_USE_ENV_PROXY ?? '(unset)'} node=${process.version}`,
+      );
+      try {
+        const r = await fetch(probeHost, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(10000),
+        });
+        console.log(`[boot] trace-storage probe: host reachable (HTTP ${r.status})`);
+      } catch (e) {
+        const err = e as Error & { cause?: { code?: string; message?: string; errno?: string } };
+        console.warn(
+          `[boot] trace-storage probe FAILED (span DATA upload will fail): ${err.message} | cause.code=${err.cause?.code ?? ''} errno=${err.cause?.errno ?? ''} msg=${err.cause?.message ?? ''}`,
+        );
+      }
+    })();
 
     // Silence one specific mlflow-tracing warning that fires for every
     // Lakebase query made outside an agent turn (route handlers persisting

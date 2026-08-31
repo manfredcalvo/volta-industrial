@@ -162,15 +162,59 @@ resources:
       name: volta-plant-floor
       description: "Volta Plant Floor — the AI agent's investigate → draft → act surface over governed Lakebase data."
       source_code_path: ./app
+      # OBO user-authorization allowlist (the OAuth integration's max scopes).
+      # app.yaml's user_authorization.scopes requests a subset per session, but
+      # a scope must be allowlisted HERE first or the user's forwarded token
+      # won't carry it (the agent's /serving-endpoints/responses call 403s with
+      # "required scopes: model-serving" otherwise). These canonical short names
+      # match app.yaml. NOTE: adding/removing an app resource can silently wipe
+      # these — re-check `apps get … effective_user_api_scopes` after each deploy.
+      user_api_scopes:
+        - model-serving
+        - genie
+        - sql
+        - postgres
+        - ai-gateway
+        - catalog.catalogs:read
+        - catalog.schemas:read
+        - catalog.tables:read
       resources:
         - name: sql-warehouse
           sql_warehouse:
             id: ${var.warehouse_id}
             permission: CAN_USE
+        # The agent's LLM. Bound so the app SP has CAN_QUERY — the model
+        # inference call authenticates as the SP (see server/lib/auth.ts
+        # serviceAuthHeaders), sidestepping the OBO model-serving scope check.
+        - name: serving-endpoint
+          serving_endpoint:
+            name: databricks-gpt-5-4
+            permission: CAN_QUERY
+        # The agent-trace MLflow experiment (created at first boot at
+        # /Shared/solution_builder/volta-plant-floor-agent-traces). Binding it
+        # grants the app SP CAN_EDIT so the mlflow-tracing exporter can write
+        # traces via OAuth (m2m) alone — no PAT/token override, which is what
+        # caused the "more than one authorization method: oauth and pat" export
+        # failures. valueFrom injects MLFLOW_EXPERIMENT_ID (see app.yaml).
+        - name: experiment
+          experiment:
+            experiment_id: "42200714304546"
+            permission: CAN_EDIT
+        # The Genie space the agent's ask_data tool queries. Bound so the app
+        # SP has CAN_RUN — the tool authenticates as the SP (see genie.ts /
+        # serviceAuthHeaders), sidestepping the OBO `genie` scope check.
+        - name: genie-space
+          genie_space:
+            name: genie-space
+            space_id: "01f1a423e4f41fc889a1153328060aa4"
+            permission: CAN_RUN
         - name: postgres
           postgres:
             branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
-            database: databricks_postgres
+            # `database` must be the full DB resource path, not the bare PG
+            # database name. Note the resource id is `databricks-postgres`
+            # (hyphen) even though the Postgres database is `databricks_postgres`.
+            database: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production/databases/databricks-postgres
             permission: CAN_CONNECT_AND_CREATE
 
 # Build the app locally before deploy (npm install + drizzle generate + tsdown/vite build).

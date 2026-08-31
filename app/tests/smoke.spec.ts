@@ -48,15 +48,17 @@ let failedRequests: string[] = [];
 test('smoke test - app loads and displays home page', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: APP_CONFIG.name })).toBeVisible();
+  // Volta home hero headline (see client/src/home/HomeView.tsx STORY).
   await expect(
-    page.getByRole('heading', { name: 'Welcome to your Databricks App' }),
+    page.getByRole('heading', {
+      name: 'A critical line is trending toward an unplanned stop.',
+    }),
   ).toBeVisible();
-  await expect(page.getByText('Getting Started')).toBeVisible();
+  await expect(page.getByText('Try asking')).toBeVisible();
 
-  await expect(page.getByRole('link', { name: 'Home' })).toBeVisible();
-  for (const [, plugin] of enabledPages) {
-    await expect(page.getByRole('link', { name: plugin.navLabel })).toBeVisible();
+  // Sidebar nav entries.
+  for (const label of ['Assistant', 'Operations', 'Analytics', 'Dashboard']) {
+    await expect(page.getByRole('link', { name: label })).toBeVisible();
   }
 });
 

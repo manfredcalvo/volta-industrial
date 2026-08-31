@@ -66,7 +66,7 @@ export function IngestionFlow() {
     >
       <FlowKeyframes />
       <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-        Order data flows in real time through{' '}
+        Line telemetry flows in real time through{' '}
         <b className="text-foreground">Zerobus</b>,{' '}
         <b className="text-foreground">Lakeflow</b>, and{' '}
         <b className="text-foreground">Lakebase</b>.
@@ -77,7 +77,7 @@ export function IngestionFlow() {
           via the outer flex; this works even when sub-labels overhang. */}
       <div className="flex justify-center" style={{ marginBottom: 38 }}>
         <div className="inline-flex items-start" style={{ gap: 2 }}>
-          <Stage bare icon={<DataEventsIcon />} name="Data" sub="POS · web · CS" />
+          <Stage bare icon={<DataEventsIcon />} name="Sensors" sub="vibration · temp · WOs" />
           <Connector />
           <Stage
             icon={

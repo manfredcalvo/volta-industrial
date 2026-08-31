@@ -43,7 +43,7 @@ import type { Tool } from '@openai/agents';
 import { loggedTool as tool } from './tools/logged-tool.js';
 import * as mlflow from 'mlflow-tracing';
 import { z } from 'zod';
-import { authHeaders } from '../lib/auth.js';
+import { serviceAuthHeaders } from '../lib/auth.js';
 import type { AppDb } from '../db/index.js';
 import {
   worstAtriskLine,
@@ -341,10 +341,15 @@ function makeTools(ctx: AgentContext): Tool[] {
 }
 
 export async function configureAgentsSdk(ctx: AgentContext): Promise<void> {
-  // Build a fresh auth header each configure; OpenAI SDK holds the key at
-  // client construction time, so we reconfigure per request to pick up a
-  // fresh bearer. (setDefaultOpenAIClient is idempotent.)
-  const headers = await authHeaders(ctx.req);
+  // Authenticate the LLM inference call as the app SERVICE PRINCIPAL, not OBO.
+  // OBO user tokens must carry the `model-serving` scope, which 403s when the
+  // per-user token is stale after a scope change; the SP's m2m token isn't
+  // scope-restricted and, with CAN_QUERY on the serving-endpoint resource
+  // (databricks.yml), invokes the Responses API reliably. The OBO tools (Genie,
+  // Lakebase) keep using the user token; MLflow still attributes the turn to
+  // the viewing user. (setDefaultOpenAIClient is idempotent — reconfigure per
+  // request to pick up a fresh SP bearer.)
+  const headers = await serviceAuthHeaders();
   const bearer = headers.get('Authorization')?.replace(/^Bearer /, '') ?? '';
   // NOTE: we used to wrap with mlflow-openai's `tracedOpenAI()`, but its
   // wrapper `await`s the response to snapshot outputs — which breaks

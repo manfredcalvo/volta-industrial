@@ -40,3 +40,23 @@ export async function authHeaders(req: Request): Promise<Headers> {
   await client.config.authenticate(h);
   return h;
 }
+
+/**
+ * Always authenticate as the app's SERVICE PRINCIPAL (the SDK's default
+ * credential chain — DATABRICKS_CLIENT_ID/SECRET in prod), never OBO.
+ *
+ * Use this for the LLM inference call to the Responses API. OBO user tokens
+ * carry the `user_authorization.scopes`, and a missing/stale `model-serving`
+ * scope (per-user token caching, delayed consent after a scope change) makes
+ * the serving endpoint 403 with "Invalid scope, required scopes: model-serving".
+ * The SP's m2m token isn't scope-restricted that way: with CAN_QUERY on the
+ * serving-endpoint resource (declared in databricks.yml) the SP can invoke it
+ * reliably. User attribution for the turn is still carried by MLflow tracing +
+ * the OBO tools (Genie, Lakebase writes), which keep using `authHeaders(req)`.
+ */
+export async function serviceAuthHeaders(): Promise<Headers> {
+  const h = new Headers();
+  const { client } = getExecutionContext();
+  await client.config.authenticate(h);
+  return h;
+}
