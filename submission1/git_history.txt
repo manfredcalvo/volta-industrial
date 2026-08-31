@@ -1,5 +1,7 @@
-* 1f01b0b (HEAD -> main) Build 1 evidence: executed notebook + execution-evidence artifacts (schema+keys, relational joins, writable vs read-only synced)
-* eb2a2e3 (origin/main) M2 reverse sync: fix CDF parent path (/databases/) + snake_case id; verified end-to-end
+* ff8c04b (HEAD -> main) Build 1 evidence: add branch forecast execution (next_shift_forecast) to notebook + evidence
+* 778c9ec (origin/main) refresh git_history.txt with latest evidence commits
+* 1f01b0b Build 1 evidence: executed notebook + execution-evidence artifacts (schema+keys, relational joins, writable vs read-only synced)
+* eb2a2e3 M2 reverse sync: fix CDF parent path (/databases/) + snake_case id; verified end-to-end
 * 0b5c0e7 M2 reverse sync: define Lakebase CDF (Postgres->UC Delta) as code (CLI/API)
 *   dafc9b0 Merge branch 'dev': promote next_shift_forecast migration to main
 |\  
