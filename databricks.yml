@@ -200,6 +200,14 @@ resources:
           experiment:
             experiment_id: "42200714304546"
             permission: CAN_EDIT
+        # The Genie space the agent's ask_data tool queries. Bound so the app
+        # SP has CAN_RUN — the tool authenticates as the SP (see genie.ts /
+        # serviceAuthHeaders), sidestepping the OBO `genie` scope check.
+        - name: genie-space
+          genie_space:
+            name: genie-space
+            space_id: "01f1a423e4f41fc889a1153328060aa4"
+            permission: CAN_RUN
         - name: postgres
           postgres:
             branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production

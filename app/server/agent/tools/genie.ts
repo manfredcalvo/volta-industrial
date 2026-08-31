@@ -30,7 +30,7 @@
 import { loggedTool as tool } from './logged-tool.js';
 import * as mlflow from 'mlflow-tracing';
 import { z } from 'zod';
-import { authHeaders } from '../../lib/auth.js';
+import { serviceAuthHeaders } from '../../lib/auth.js';
 import type { DataCallResult, DataToolContext, ToolProgressEvent } from './types.js';
 
 /**
@@ -47,7 +47,14 @@ export async function callGenieSpace(
     try { ctx.onToolProgress?.(ev); } catch { /* never let progress fail the tool */ }
   }
 
-  const headers = await authHeaders(ctx.req);
+  // Authenticate as the app SERVICE PRINCIPAL, not OBO. OBO user tokens must
+  // carry the `genie` scope, which 403s in this workspace (per-user token
+  // caching / user-authorization consent), surfacing as the agent's "governed
+  // investigation service returned a 403 scope error". The SP m2m token isn't
+  // scope-restricted; with CAN_RUN on the bound genie_space resource
+  // (databricks.yml) + SELECT on the underlying tables, the Conversation API
+  // works. Same rationale as the model inference call (see lib/auth.ts).
+  const headers = await serviceAuthHeaders();
   headers.set('Content-Type', 'application/json');
 
   // Start a Genie conversation. 2-min cap on the kickoff call — it's a
@@ -92,7 +99,7 @@ export async function callGenieSpace(
   let answer = '';
   for (let attempts = 0; attempts < POLL_MAX_ATTEMPTS; attempts++) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    const pollHeaders = await authHeaders(ctx.req);
+    const pollHeaders = await serviceAuthHeaders();
     pollHeaders.set('Content-Type', 'application/json');
     const pollResp = await fetch(pollUrl, {
       method: 'GET',
