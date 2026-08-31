@@ -44,6 +44,11 @@ env:
   # placeholder resolution.
   - name: WAREHOUSE_ID
     valueFrom: sql-warehouse
+  # The agent-trace MLflow experiment id, from the bound `experiment` app
+  # resource (databricks.yml). server.ts prefers this over deriving+creating
+  # the experiment, and the SP's CAN_EDIT lets the exporter write via OAuth.
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: experiment
 
   # ── Plain values (set statically) ───────────────────────────────────
   # Normally finalize_app.sh harvests these from the setup job's

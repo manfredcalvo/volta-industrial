@@ -554,6 +554,15 @@ function startBackgroundInit() {
 // but defer mlflow.init() until after sync — otherwise the SDK instruments
 // sync queries that have no parent span and produces noisy warnings.
 const mlflowIdPromise = (async () => {
+  // Precedence 0: the experiment bound as an app resource (valueFrom:
+  // experiment → MLFLOW_EXPERIMENT_ID). The bundle grants the app SP CAN_EDIT
+  // on it, so the OAuth-only exporter can write traces without a get/create
+  // round-trip — and this is the id we KNOW the SP has access to.
+  const boundId = (process.env.MLFLOW_EXPERIMENT_ID ?? '').trim();
+  if (boundId) {
+    console.log(`[boot +${ms()}] MLflow experiment from app resource (id=${boundId})`);
+    return boundId;
+  }
   // Resolve the experiment path with a self-derived fallback so tracing works
   // out of the box on EVERY deploy path — no env plumbing required. Precedence:
   //   1. explicit `agentMlflowExperimentPath` (from AGENT_MLFLOW_EXPERIMENT_PATH)
@@ -625,36 +634,46 @@ void (async () => {
   // Now safe to enable tracing — sync queries are done.
   agentExperimentId = await mlflowIdPromise;
   if (agentExperimentId) {
-    // Make the mlflow-tracing exporter use the SAME auth as the app's working
-    // client. `mlflow.init({trackingUri:'databricks'})` builds its own bundled
-    // @databricks/sdk-experimental Config, which resolves the DEFAULT
-    // ~/.databrickscfg and IGNORES the DATABRICKS_CONFIG_FILE that appkit's
-    // client is wired to — so it gets no token and every trace upload throws
-    // "cannot configure default credentials". `init` accepts explicit `host` +
-    // `databricksToken` overrides, so we pass the bearer the app client already
-    // resolves (project token in preview, SP/OBO in deploy). We read the token
-    // from the AUTHENTICATED header, not config.token, so it works whether the
-    // profile is PAT or OAuth (OAuth tokens only materialize during
-    // authenticate()). Graceful: on any failure, fall back to the default init.
+    // Auth for the mlflow-tracing exporter (its bundled @databricks/sdk-
+    // experimental Config resolves independently of appkit's client).
+    //
+    // In the Apps container the platform injects OAuth m2m env creds
+    // (DATABRICKS_CLIENT_ID/SECRET + DATABRICKS_HOST). If we ALSO pass an
+    // explicit `databricksToken`, the SDK sees two auth methods and throws
+    // "more than one authorization method configured: oauth and pat" on every
+    // export. So when OAuth env creds are present, pass NEITHER host nor token
+    // and let the exporter authenticate via OAuth alone — the SP has CAN_EDIT
+    // on the bound experiment resource, so trace writes succeed. Only in
+    // dev/PAT (no OAuth env) do we resolve + pass an explicit bearer, which is
+    // what makes tracing work there without a ~/.databrickscfg default profile.
+    const hasOauthEnv = !!(
+      process.env.DATABRICKS_CLIENT_ID && process.env.DATABRICKS_CLIENT_SECRET
+    );
     let mlflowHost: string | undefined;
     let mlflowToken: string | undefined;
-    try {
-      const { client } = getExecutionContext();
-      const h = new Headers();
-      await client.config.authenticate(h);
-      mlflowToken = /^Bearer\s+(.+)$/i.exec(h.get('Authorization') ?? '')?.[1];
-      mlflowHost = (client.config as { host?: string }).host
-        ?? process.env.DATABRICKS_HOST;
-    } catch (e) {
-      console.warn('[boot] could not resolve MLflow exporter auth from the app client — trace upload may fail:', (e as Error).message);
+    if (!hasOauthEnv) {
+      try {
+        const { client } = getExecutionContext();
+        const h = new Headers();
+        await client.config.authenticate(h);
+        mlflowToken = /^Bearer\s+(.+)$/i.exec(h.get('Authorization') ?? '')?.[1];
+        mlflowHost = (client.config as { host?: string }).host
+          ?? process.env.DATABRICKS_HOST;
+      } catch (e) {
+        console.warn('[boot] could not resolve MLflow exporter auth from the app client — trace upload may fail:', (e as Error).message);
+      }
     }
 
     mlflow.init({
       trackingUri: 'databricks',
       experimentId: agentExperimentId,
-      ...(mlflowHost && mlflowToken ? { host: mlflowHost, databricksToken: mlflowToken } : {}),
+      ...(!hasOauthEnv && mlflowHost && mlflowToken
+        ? { host: mlflowHost, databricksToken: mlflowToken }
+        : {}),
     });
-    console.log(`[boot +${ms()}] MLflow tracing active`);
+    console.log(
+      `[boot +${ms()}] MLflow tracing active (${hasOauthEnv ? 'OAuth m2m' : 'explicit token'})`,
+    );
 
     // Silence one specific mlflow-tracing warning that fires for every
     // Lakebase query made outside an agent turn (route handlers persisting

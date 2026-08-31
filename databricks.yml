@@ -190,6 +190,16 @@ resources:
           serving_endpoint:
             name: databricks-gpt-5-4
             permission: CAN_QUERY
+        # The agent-trace MLflow experiment (created at first boot at
+        # /Shared/solution_builder/volta-plant-floor-agent-traces). Binding it
+        # grants the app SP CAN_EDIT so the mlflow-tracing exporter can write
+        # traces via OAuth (m2m) alone — no PAT/token override, which is what
+        # caused the "more than one authorization method: oauth and pat" export
+        # failures. valueFrom injects MLFLOW_EXPERIMENT_ID (see app.yaml).
+        - name: experiment
+          experiment:
+            experiment_id: "42200714304546"
+            permission: CAN_EDIT
         - name: postgres
           postgres:
             branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
