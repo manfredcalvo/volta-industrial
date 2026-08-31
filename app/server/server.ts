@@ -675,6 +675,34 @@ void (async () => {
       `[boot +${ms()}] MLflow tracing active (${hasOauthEnv ? 'OAuth m2m' : 'explicit token'})`,
     );
 
+    // One-time connectivity probe to the MLflow trace-DATA storage host.
+    // Trace INFO uploads via the control-plane API (works), but trace DATA
+    // (spans) PUTs to a presigned URL on *.storage.cloud.databricks.com. If
+    // that upload fails with a bare "fetch failed" (see mlflow-tracing's
+    // clients/artifacts/databricks.js), the real reason is in error.cause —
+    // which the library swallows. Probe the host and log the exact cause
+    // (DNS ENOTFOUND / ECONNREFUSED / timeout / TLS) so the remedy (Apps
+    // egress allowlist, etc.) is unambiguous. A 403 from the bare HEAD means
+    // the host IS reachable (no signature) — that's a PASS for connectivity.
+    void (async () => {
+      const probeHost = (process.env.DATABRICKS_HOST ?? '').includes('.cloud.databricks.com')
+        ? 'https://us-east-1.storage.cloud.databricks.com/'
+        : '';
+      if (!probeHost) return;
+      try {
+        const r = await fetch(probeHost, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(10000),
+        });
+        console.log(`[boot] trace-storage probe: host reachable (HTTP ${r.status})`);
+      } catch (e) {
+        const err = e as Error & { cause?: { code?: string; message?: string; errno?: string } };
+        console.warn(
+          `[boot] trace-storage probe FAILED (span DATA upload will fail): ${err.message} | cause.code=${err.cause?.code ?? ''} errno=${err.cause?.errno ?? ''} msg=${err.cause?.message ?? ''}`,
+        );
+      }
+    })();
+
     // Silence one specific mlflow-tracing warning that fires for every
     // Lakebase query made outside an agent turn (route handlers persisting
     // messages, list endpoints, etc.). The Lakebase pool auto-creates an

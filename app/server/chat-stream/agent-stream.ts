@@ -449,7 +449,7 @@ export async function streamAgentTurn(args: {
       };
     },
     {
-      name: 'refundops.turn',
+      name: 'plantfloor.turn',
       spanType: mlflow.SpanType.AGENT,
       inputs: { user_input: userInput, history_len: messages.length },
     },
