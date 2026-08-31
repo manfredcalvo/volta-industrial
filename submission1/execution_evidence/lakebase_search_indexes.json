@@ -1,0 +1,41 @@
+{
+  "extensions": [
+    {
+      "extname": "lakebase_text"
+    },
+    {
+      "extname": "lakebase_vector"
+    },
+    {
+      "extname": "vector"
+    }
+  ],
+  "search_indexes": [
+    {
+      "indexname": "parts_search_ann",
+      "indexdef": "CREATE INDEX parts_search_ann ON dev_manffred_calvosanchez_volta_industrial.parts_search USING lakebase_ann (embedding vector_cosine_ops)"
+    },
+    {
+      "indexname": "parts_search_bm25",
+      "indexdef": "CREATE INDEX parts_search_bm25 ON dev_manffred_calvosanchez_volta_industrial.parts_search USING lakebase_bm25 (body_tsv)"
+    }
+  ],
+  "text_columns": [
+    {
+      "column_name": "body_tsv",
+      "data_type": "tsvector"
+    },
+    {
+      "column_name": "description",
+      "data_type": "text"
+    },
+    {
+      "column_name": "embedding",
+      "data_type": "USER-DEFINED"
+    },
+    {
+      "column_name": "search_text",
+      "data_type": "text"
+    }
+  ]
+}

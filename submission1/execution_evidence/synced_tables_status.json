@@ -1,0 +1,18 @@
+{
+  "line_status": {
+    "detailed_state": "SYNCED_TABLE_ONLINE_NO_PENDING_UPDATE",
+    "message": "Online Table creation succeeded using Delta Live Tables: https://fevm-serverless-stable-casaman.cloud.databricks.com#job"
+  },
+  "open_atrisk": {
+    "detailed_state": "SYNCED_TABLE_ONLINE_NO_PENDING_UPDATE",
+    "message": "Online Table creation succeeded using Delta Live Tables: https://fevm-serverless-stable-casaman.cloud.databricks.com#job"
+  },
+  "maintenance_recommendations": {
+    "detailed_state": "SYNCED_TABLE_ONLINE_NO_PENDING_UPDATE",
+    "message": "Online Table creation succeeded using Delta Live Tables: https://fevm-serverless-stable-casaman.cloud.databricks.com#job"
+  },
+  "parts": {
+    "detailed_state": "SYNCED_TABLE_ONLINE_NO_PENDING_UPDATE",
+    "message": "Online Table creation succeeded using Delta Live Tables: https://fevm-serverless-stable-casaman.cloud.databricks.com#job"
+  }
+}

@@ -1,0 +1,160 @@
+# Databricks Asset Bundle — Workshop: Volta Industrial (Downtime & Maintenance Rescue).
+#
+# WORKSHOP TEMPLATE — this bundle does the MINIMUM so a trainee can start the
+# AI Customer Challenge: it stands up the schema + a raw-data Volume and a job
+# that generates the synthetic dataset. It deliberately does NOT build the
+# pipeline, metric view, model, dashboard, Lakebase, or the app — those are the
+# graded milestones the trainee builds (see README.md → "What YOU need to
+# create" and app/APP_WORKSHOP.md).
+#
+#   1. `databricks bundle deploy`             → schema + raw_data volume + setup job
+#   2. `databricks bundle run volta_setup`    → generates the synthetic raw data
+#   Then follow README.md: build Milestone 1 (Data) → 2 (Lakebase) → 3 (App) → 4 (AI Gateway),
+#   using Genie Code against the specs in specifications/.
+#
+# The README + specifications/ + data_generation/ + app/ come with the forked
+# template folder; this bundle only provisions the workspace resources needed to
+# get data flowing. Deploy is documented in README.md — do NOT run it as part of authoring.
+bundle:
+  name: workshop-volta-industrial
+
+workspace:
+  root_path: /Workspace/Users/${workspace.current_user.userName}/volta-industrial-workshop
+
+variables:
+  catalog:
+    description: Unity Catalog for the workshop data (must already exist / you can create it).
+    default: dbdemos_templates
+  schema:
+    description: Schema for the demo tables + the raw_data volume (created by this bundle).
+    default: volta_industrial
+
+resources:
+  schemas:
+    demo_schema:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: "Workshop — Volta Industrial downtime/maintenance: synthetic plant-telemetry data."
+
+  volumes:
+    raw_data:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.demo_schema.name}
+      name: raw_data
+      volume_type: MANAGED
+      comment: "Raw parquet landing zone — generate_data.py writes here; the SDP silver you build reads it via read_files()."
+
+  jobs:
+    volta_setup:
+      name: "[Workshop] Volta Industrial — generate data"
+      description: "Generates the synthetic raw_* parquet datasets into the raw_data volume. Run this once after deploy, then build the pipeline/Lakebase/app/gateway yourself."
+      tasks:
+        - task_key: generate_data
+          notebook_task:
+            notebook_path: ./data_generation/generate_data.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.demo_schema.name}
+          environment_key: sdk_default
+      environments:
+        - environment_key: sdk_default
+          spec:
+            client: "4"
+            dependencies:
+              - numpy
+              - pandas
+              - faker
+
+  # SDP pipeline (specifications/01-lakeflow.md → Section B): reads the raw_data parquet via
+  # read_files(), builds silver (incl. the ai_classify note-risk dedup MV) + gold, and produces
+  # gold_maintenance_recommendations from the pipeline heuristic. Serverless, batch (all MVs).
+  pipelines:
+    volta_plant_floor:
+      name: "[Workshop] Volta Plant Floor — SDP"
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.demo_schema.name}
+      serverless: true
+      photon: true
+      channel: CURRENT
+      libraries:
+        - glob:
+            include: ./transformation/**
+      # Referenced in the SQL as ${catalog}/${schema} for the read_files() Volume path.
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${resources.schemas.demo_schema.name}
+
+  # Milestone 2 (Lakebase) — the low-latency serving + write surface for the app.
+  # Autoscaling Lakebase Postgres project (scale-to-zero). Synced tables from the gold
+  # tables are added separately (postgres_synced_tables is not in this CLI's bundle schema yet).
+  postgres_projects:
+    volta_lakebase:
+      project_id: volta-plant-floor
+      display_name: "Volta Plant Floor"
+      pg_version: 17
+      default_endpoint_settings:
+        autoscaling_limit_min_cu: 0.5
+        autoscaling_limit_max_cu: 1
+        suspend_timeout_duration: 300s
+
+  # UC → Lakebase synced tables (SNAPSHOT — MV sources, no CDF needed). PK = line_id.
+  # The synced table's UC entry lives in our existing catalog/schema (no separate Lakebase
+  # database catalog needed — avoids CREATE CATALOG on the metastore); the data lands in the
+  # Lakebase project via `branch` + `postgres_database`.
+  postgres_synced_tables:
+    line_status_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.line_status
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_line_status
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+    open_atrisk_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.open_atrisk
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_open_atrisk
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+    maintenance_recommendations_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.maintenance_recommendations
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_maintenance_recommendations
+      primary_key_columns:
+        - line_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+    # Parts catalog → Lakebase (indexed by Lakebase Search for the expedite-parts play).
+    parts_sync:
+      synced_table_id: ${var.catalog}.${resources.schemas.demo_schema.name}.parts
+      source_table_full_name: ${var.catalog}.${resources.schemas.demo_schema.name}.gold_parts
+      primary_key_columns:
+        - part_id
+      scheduling_policy: SNAPSHOT
+      branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: ${resources.schemas.demo_schema.name}
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production

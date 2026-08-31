@@ -1,0 +1,8 @@
+{
+  "catalog": "serverless_stable_casaman_catalog",
+  "cdf_config_id": "volta_ops_cdf",
+  "create_time": "2026-08-31T00:13:16.883Z",
+  "name": "projects/volta-plant-floor/branches/production/databases/databricks-postgres/cdf-configs/volta_ops_cdf",
+  "postgres_schema": "ops",
+  "schema": "dev_manffred_calvosanchez_volta_industrial"
+}

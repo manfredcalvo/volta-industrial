@@ -1,0 +1,14 @@
+{
+  "project_default_endpoint_settings": {
+    "autoscaling_limit_max_cu": 1,
+    "autoscaling_limit_min_cu": 0.5,
+    "suspend_timeout_duration": "300s"
+  },
+  "endpoint_spec": {
+    "autoscaling_limit_min_cu": null,
+    "autoscaling_limit_max_cu": null,
+    "suspend_timeout_duration": null,
+    "no_suspension": null
+  },
+  "endpoint_current_state": "ACTIVE"
+}

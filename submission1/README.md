@@ -16,6 +16,15 @@ Volta Industrial (Downtime & Maintenance Rescue). Lakebase project (instance): *
 | 7 | Representative business question + query + result | `core_question.txt`, `core_query.sql`, `core_query_result.json` |
 | 8 | Git history (`git log --graph --oneline --decorate --all`) w/ branch + merge | `git_history.txt` |
 
+## Build-as-code constructs (in `build_as_code/`, with execution evidence)
+
+| Requirement | Code construct | Execution evidence |
+|---|---|---|
+| Sync defined as code (DAB), not UI | `build_as_code/databricks.yml` → `postgres_synced_tables` | `execution_evidence/synced_tables_status.json` (ONLINE ×4) |
+| Reverse sync as code, not UI | `build_as_code/reverse_sync_cdf.sh` | `execution_evidence/cdf_config.json`, `reverse_sync_sample.json` |
+| Scale-to-zero configured | `build_as_code/databricks.yml` → `postgres_projects…default_endpoint_settings` (min 0.5 CU, 300s auto-suspend) | `execution_evidence/scale_to_zero_config.json` |
+| Lakebase Search (hybrid vector + full-text) over a text column | `build_as_code/lakebase_search_setup.sql` (`lakebase_ann` + `lakebase_bm25` on `body_tsv`/`embedding`) | `execution_evidence/lakebase_search_indexes.json`, `search_result.json` |
+
 ## How the pieces connect
 `raw_*` parquet → SDP pipeline (silver + gold, `ai_classify`) → governed gold tables →
 `postgres_synced_tables` (SNAPSHOT) mirror into Lakebase → `parts_search` + Lakebase Search
