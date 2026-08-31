@@ -1,0 +1,20 @@
+Authorship + promotion evidence for the agent change
+====================================================
+
+The migration 001_create_next_shift_forecast.sql was authored by the coding agent on the
+git 'dev' branch (off main) and promoted to main via a --no-ff merge.
+
+--- Commit (authorship: Author line + Co-authored-by trailer) ---
+commit 326ddf5bd08023f21e7644ea52ff31e5f40802f5
+Author: manffred-calvosanchez_data <manffred.calvosanchez@databricks.com>
+Date:   Sun Aug 30 17:53:06 2026 -0600
+
+    agent change: add next_shift_forecast migration (developed on Lakebase dev branch)
+
+Co-authored-by: Isaac <no-reply@databricks.com>
+
+--- Merge that promoted it to main ---
+commit dafc9b02492193ac7edc90eceaff820533702e1f
+Merge branch 'dev': promote next_shift_forecast migration to main
+Co-authored-by: Isaac <no-reply@databricks.com>
+

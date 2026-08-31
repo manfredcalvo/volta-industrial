@@ -1,0 +1,26 @@
+diff --git a/submission1/agent_change/001_create_next_shift_forecast.sql b/submission1/agent_change/001_create_next_shift_forecast.sql
+new file mode 100644
+index 0000000..8281985
+--- /dev/null
++++ b/submission1/agent_change/001_create_next_shift_forecast.sql
+@@ -0,0 +1,20 @@
++-- Migration 001 — next_shift_forecast
++-- A coding-agent (Claude Code) schema + data change, developed on the Lakebase `dev` branch,
++-- validated there, then promoted to `production`.
++--
++-- What it does: materializes a forecasting table projecting the next-shift (8h) unplanned-downtime
++-- cost by plant if no maintenance action is taken, from the synced governed `line_status` table
++-- (projected cost = failure_risk_score x 8h x $22,000/hr, summed over critical/elevated lines).
++--
++-- Author: Claude Code (coding agent)
++-- Co-authored-by: Isaac <no-reply@databricks.com>
++
++CREATE TABLE IF NOT EXISTS dev_manffred_calvosanchez_volta_industrial.next_shift_forecast AS
++SELECT
++  l.plant_id,
++  COUNT(*) FILTER (WHERE l.risk_band IN ('critical','elevated'))                AS atrisk_lines,
++  ROUND(SUM(CASE WHEN l.risk_band IN ('critical','elevated')
++                 THEN l.failure_risk_score * 8 * 22000 ELSE 0 END)::numeric, 0) AS projected_next_shift_cost_usd
++FROM dev_manffred_calvosanchez_volta_industrial.line_status l
++GROUP BY l.plant_id
++ORDER BY projected_next_shift_cost_usd DESC;

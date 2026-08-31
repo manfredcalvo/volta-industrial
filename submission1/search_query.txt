@@ -1,0 +1,4 @@
+Natural-language query: "bearing seal 40mm coupling"
+
+Lakebase Search (hybrid: lakebase_bm25 keyword + lakebase_ann vector, fused with RRF).
+Query embedding produced by ai_query('databricks-gte-large-en', <query>).

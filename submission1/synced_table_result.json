@@ -1,0 +1,92 @@
+[
+  {
+    "line_id": "LINE-0278",
+    "plant_id": "PLANT-04",
+    "machine_type": "Welding_Cell",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": true
+  },
+  {
+    "line_id": "LINE-0902",
+    "plant_id": "PLANT-02",
+    "machine_type": "Assembly_Robot",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": false
+  },
+  {
+    "line_id": "LINE-0928",
+    "plant_id": "PLANT-08",
+    "machine_type": "Assembly_Robot",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": false
+  },
+  {
+    "line_id": "LINE-1032",
+    "plant_id": "PLANT-07",
+    "machine_type": "Hydraulic_Press",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": false
+  },
+  {
+    "line_id": "LINE-0369",
+    "plant_id": "PLANT-04",
+    "machine_type": "Hydraulic_Press",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": true
+  },
+  {
+    "line_id": "LINE-0317",
+    "plant_id": "PLANT-02",
+    "machine_type": "Welding_Cell",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": true
+  },
+  {
+    "line_id": "LINE-0031",
+    "plant_id": "PLANT-01",
+    "machine_type": "Grinder",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": false
+  },
+  {
+    "line_id": "LINE-0122",
+    "plant_id": "PLANT-03",
+    "machine_type": "Hydraulic_Press",
+    "failure_risk_score": 0.95,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41800.0,
+    "part_local": true
+  },
+  {
+    "line_id": "LINE-0512",
+    "plant_id": "PLANT-02",
+    "machine_type": "Assembly_Robot",
+    "failure_risk_score": 0.947,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41668.0,
+    "part_local": false
+  },
+  {
+    "line_id": "LINE-0967",
+    "plant_id": "PLANT-02",
+    "machine_type": "CNC_Mill",
+    "failure_risk_score": 0.947,
+    "risk_band": "critical",
+    "downtime_exposure_usd": 41668.0,
+    "part_local": true
+  }
+]

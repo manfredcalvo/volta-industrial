@@ -1,0 +1,92 @@
+[
+  {
+    "line_id": "LINE-0031",
+    "plant_id": "PLANT-01",
+    "machine_type": "Grinder",
+    "failure_risk": 0.95,
+    "downtime_exposure_usd": 41800.0,
+    "candidate_part_id": "PART-00761",
+    "part_lead_time_days": 7
+  },
+  {
+    "line_id": "LINE-0902",
+    "plant_id": "PLANT-02",
+    "machine_type": "Assembly_Robot",
+    "failure_risk": 0.95,
+    "downtime_exposure_usd": 41800.0,
+    "candidate_part_id": "PART-00301",
+    "part_lead_time_days": 15
+  },
+  {
+    "line_id": "LINE-0928",
+    "plant_id": "PLANT-08",
+    "machine_type": "Assembly_Robot",
+    "failure_risk": 0.95,
+    "downtime_exposure_usd": 41800.0,
+    "candidate_part_id": "PART-00079",
+    "part_lead_time_days": 6
+  },
+  {
+    "line_id": "LINE-1032",
+    "plant_id": "PLANT-07",
+    "machine_type": "Hydraulic_Press",
+    "failure_risk": 0.95,
+    "downtime_exposure_usd": 41800.0,
+    "candidate_part_id": "PART-00327",
+    "part_lead_time_days": 12
+  },
+  {
+    "line_id": "LINE-0512",
+    "plant_id": "PLANT-02",
+    "machine_type": "Assembly_Robot",
+    "failure_risk": 0.95,
+    "downtime_exposure_usd": 41668.0,
+    "candidate_part_id": "PART-00265",
+    "part_lead_time_days": 12
+  },
+  {
+    "line_id": "LINE-1136",
+    "plant_id": "PLANT-05",
+    "machine_type": "CNC_Mill",
+    "failure_risk": 0.93,
+    "downtime_exposure_usd": 41052.0,
+    "candidate_part_id": "PART-00395",
+    "part_lead_time_days": 4
+  },
+  {
+    "line_id": "LINE-0187",
+    "plant_id": "PLANT-01",
+    "machine_type": "Assembly_Robot",
+    "failure_risk": 0.93,
+    "downtime_exposure_usd": 40964.0,
+    "candidate_part_id": "PART-00049",
+    "part_lead_time_days": 9
+  },
+  {
+    "line_id": "LINE-0551",
+    "plant_id": "PLANT-03",
+    "machine_type": "Injection_Molder",
+    "failure_risk": 0.93,
+    "downtime_exposure_usd": 40920.0,
+    "candidate_part_id": "PART-00691",
+    "part_lead_time_days": 9
+  },
+  {
+    "line_id": "LINE-0408",
+    "plant_id": "PLANT-04",
+    "machine_type": "Welding_Cell",
+    "failure_risk": 0.93,
+    "downtime_exposure_usd": 40876.0,
+    "candidate_part_id": "PART-00738",
+    "part_lead_time_days": 18
+  },
+  {
+    "line_id": "LINE-0291",
+    "plant_id": "PLANT-03",
+    "machine_type": "Hydraulic_Press",
+    "failure_risk": 0.92,
+    "downtime_exposure_usd": 40612.0,
+    "candidate_part_id": "PART-00775",
+    "part_lead_time_days": 20
+  }
+]

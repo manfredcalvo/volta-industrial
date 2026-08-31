@@ -1,0 +1,7 @@
+Representative business question for Volta Industrial:
+
+"Which at-risk production lines are trending toward a stop AND need a replacement part that is
+ NOT stocked locally (so an unplanned stop would be costliest to recover from), ranked by
+ downtime-at-risk exposure? And how does that exposure roll up by plant?"
+
+Answered from the synced Lakebase tables line_status + open_atrisk (governed gold tables).

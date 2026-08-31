@@ -1,0 +1,13 @@
+[
+  {
+    "line_id": "LINE-0004",
+    "plant_id": "PLANT-03",
+    "risk_band": "critical",
+    "part_local": false,
+    "candidate_part_id": "PART-00001",
+    "part_name": "hydraulic_seal Injection_Molder",
+    "lead_time_days": 2,
+    "recommended_action": "pull_now",
+    "predicted_downtime_cost_avoided_usd": 76560.0
+  }
+]

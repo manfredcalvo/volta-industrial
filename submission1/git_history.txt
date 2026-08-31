@@ -1,0 +1,11 @@
+* eb2a2e3 (HEAD -> main, origin/main) M2 reverse sync: fix CDF parent path (/databases/) + snake_case id; verified end-to-end
+* 0b5c0e7 M2 reverse sync: define Lakebase CDF (Postgres->UC Delta) as code (CLI/API)
+*   dafc9b0 Merge branch 'dev': promote next_shift_forecast migration to main
+|\  
+| * 326ddf5 (dev) agent change: add next_shift_forecast migration (developed on Lakebase dev branch)
+|/  
+* 119f3de M2 Lakebase Search: gold_parts + parts sync + BM25/vector search setup
+* f353fd5 M2 Lakebase: autoscaling project + UC->Lakebase synced tables (bundle-managed)
+* 1323dd2 M1 governance + BI: mv_line_risk metric view, Genie space, AI/BI dashboard
+* f1b6c85 M1 data: SDP pipeline (silver + gold, ai_classify note-risk, maintenance heuristic)
+* dcd88c2 Import Volta Industrial workshop template (as provided)

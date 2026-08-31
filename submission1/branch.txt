@@ -1,0 +1,22 @@
+Lakebase development branch
+===========================
+Project (instance): volta-plant-floor
+Branch name       : dev   (copy-on-write branch created off the root `production` branch)
+Created with      : databricks postgres create-branch projects/volta-plant-floor dev \
+                      --json '{"spec": {"source_branch": "projects/volta-plant-floor/branches/production", "no_expiry": true}}'
+
+Change made on the branch (forecasting scenario + DDL) — migration 001_create_next_shift_forecast.sql:
+  Materialized `next_shift_forecast`: projected next-shift (8h) unplanned-downtime cost by plant
+  if no action is taken, from the synced governed line_status table.
+
+Branch isolation verified: the table existed on `dev` while PROD had it = None (None => not present) BEFORE promotion.
+
+Forecasting result on the dev branch:
+  PLANT-01: 14 at-risk lines -> projected next-shift cost $2,071,872
+  PLANT-06: 14 at-risk lines -> projected next-shift cost $2,058,320
+  PLANT-03: 13 at-risk lines -> projected next-shift cost $1,973,136
+  PLANT-05: 13 at-risk lines -> projected next-shift cost $1,904,320
+  PLANT-07: 12 at-risk lines -> projected next-shift cost $1,780,416
+  PLANT-04: 11 at-risk lines -> projected next-shift cost $1,685,728
+  PLANT-02: 9 at-risk lines -> projected next-shift cost $1,420,144
+  PLANT-08: 8 at-risk lines -> projected next-shift cost $1,188,704

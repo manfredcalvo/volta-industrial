@@ -1,0 +1,72 @@
+[
+  {
+    "part_id": "PART-00091",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 3,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00157",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 10,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00193",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 10,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00199",
+    "part_name": "hydraulic_seal CNC_Mill",
+    "part_local": true,
+    "lead_time_days": 18,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00270",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 1,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00312",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 17,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00343",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 16,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00528",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 6,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00529",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 15,
+    "rrf_score": 0.01639
+  },
+  {
+    "part_id": "PART-00566",
+    "part_name": "bearing Grinder",
+    "part_local": true,
+    "lead_time_days": 14,
+    "rrf_score": 0.01639
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "schema": "dev_manffred_calvosanchez_volta_industrial",
+    "table": "line_status",
+    "pk_constraint": "line_status_pkey",
+    "key_columns": "line_id"
+  },
+  {
+    "schema": "dev_manffred_calvosanchez_volta_industrial",
+    "table": "maintenance_recommendations",
+    "pk_constraint": "maintenance_recommendations_pkey",
+    "key_columns": "line_id"
+  },
+  {
+    "schema": "dev_manffred_calvosanchez_volta_industrial",
+    "table": "open_atrisk",
+    "pk_constraint": "open_atrisk_pkey",
+    "key_columns": "line_id"
+  },
+  {
+    "schema": "dev_manffred_calvosanchez_volta_industrial",
+    "table": "parts",
+    "pk_constraint": "parts_pkey",
+    "key_columns": "part_id"
+  },
+  {
+    "schema": "dev_manffred_calvosanchez_volta_industrial",
+    "table": "parts_search",
+    "pk_constraint": "parts_search_pkey",
+    "key_columns": "part_id"
+  },
+  {
+    "schema": "ops",
+    "table": "work_orders",
+    "pk_constraint": "work_orders_pkey",
+    "key_columns": "wo_id"
+  }
+]
