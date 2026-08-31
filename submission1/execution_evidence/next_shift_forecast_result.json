@@ -1,0 +1,42 @@
+[
+  {
+    "plant_id": "PLANT-01",
+    "atrisk_lines": 14,
+    "projected_next_shift_cost_usd": "2071872"
+  },
+  {
+    "plant_id": "PLANT-06",
+    "atrisk_lines": 14,
+    "projected_next_shift_cost_usd": "2058320"
+  },
+  {
+    "plant_id": "PLANT-03",
+    "atrisk_lines": 13,
+    "projected_next_shift_cost_usd": "1973136"
+  },
+  {
+    "plant_id": "PLANT-05",
+    "atrisk_lines": 13,
+    "projected_next_shift_cost_usd": "1904320"
+  },
+  {
+    "plant_id": "PLANT-07",
+    "atrisk_lines": 12,
+    "projected_next_shift_cost_usd": "1780416"
+  },
+  {
+    "plant_id": "PLANT-04",
+    "atrisk_lines": 11,
+    "projected_next_shift_cost_usd": "1685728"
+  },
+  {
+    "plant_id": "PLANT-02",
+    "atrisk_lines": 9,
+    "projected_next_shift_cost_usd": "1420144"
+  },
+  {
+    "plant_id": "PLANT-08",
+    "atrisk_lines": 8,
+    "projected_next_shift_cost_usd": "1188704"
+  }
+]
