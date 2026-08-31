@@ -28,6 +28,9 @@ variables:
   schema:
     description: Schema for the demo tables + the raw_data volume (created by this bundle).
     default: volta_industrial
+  warehouse_id:
+    description: SQL warehouse the app uses (analytics + boot-time Delta→Lakebase sync).
+    default: a950531e6997adb4
 
 resources:
   schemas:
@@ -151,6 +154,45 @@ resources:
       new_pipeline_spec:
         storage_catalog: ${var.catalog}
         storage_schema: ${resources.schemas.demo_schema.name}
+
+  # Milestone 3 — the AppKit plant-floor app (agent action surface). Source in ./app.
+  # `resources` map the app.yaml `valueFrom` names (sql-warehouse, postgres) to real bindings.
+  apps:
+    volta_app:
+      name: volta-plant-floor
+      description: "Volta Plant Floor — the AI agent's investigate → draft → act surface over governed Lakebase data."
+      source_code_path: ./app
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+        - name: postgres
+          postgres:
+            branch: projects/${resources.postgres_projects.volta_lakebase.project_id}/branches/production
+            database: databricks_postgres
+            permission: CAN_CONNECT_AND_CREATE
+
+# Build the app locally before deploy (npm install + drizzle generate + tsdown/vite build).
+# The built dist/ + client/dist/ + drizzle/ ship via sync.include below; the container
+# reinstalls runtime deps and runs `node dist/server.js` (see app/app.yaml).
+artifacts:
+  volta_app_build:
+    path: ./app
+    executable: bash
+    build: bash scripts/build-app.sh
+
+# The build artifacts (dist/, client/dist/, drizzle/) are gitignored, so force-include them
+# for the app upload; never ship node_modules or the local .env.
+sync:
+  include:
+    - app/dist/**
+    - app/client/dist/**
+    - app/drizzle/**
+  exclude:
+    - app/node_modules/**
+    - app/.env
+    - app/.npmrc
 
 targets:
   dev:
