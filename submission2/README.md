@@ -22,7 +22,7 @@ app activity in the deployed app (`volta-plant-floor`), backed by the Lakebase
 
 | Requirement | Build construct | Execution evidence |
 |---|---|---|
-| App **retrieves from the Build-1 Lakebase Search index**, not a separate store | `build_as_code/lakebase_search_setup.sql` (the `parts_search` + `lakebase_bm25`/`lakebase_ann` index) + `build_as_code/app_search_parts.sql` (the app's BM25 retrieval query against `parts_search`) | `execution_evidence/lakebase_search_indexes.json` (indexes present, 800 rows) + `execution_evidence/search_execution.json` (live `search_parts` run) + `search_query.txt`/`search_result.json` |
+| App **retrieves from the Build-1 Lakebase Search index**, not a separate store | `build_as_code/lakebase_search_setup.sql` (the `parts_search` + `lakebase_bm25`/`lakebase_ann` index) + `build_as_code/app_search_parts.sql` (the app's BM25 retrieval query against `parts_search`) | **`build2_search_execution.ipynb` — executed notebook with outputs** (index defs + 800 rows; the BM25 retrieval query returning 10 `parts_search` rows; confirmation it targets `parts_search`, not `app.parts`); plus `execution_evidence/lakebase_search_indexes.json`, `execution_evidence/search_execution.json` (live agent `search_parts` run), `search_query.txt`/`search_result.json` |
 
 ## Decision chain (one coherent thread across the exports)
 
