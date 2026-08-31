@@ -1,0 +1,27 @@
+* 8103842 (HEAD -> build2-app) Run all agent Databricks calls as the app SP; probe egress proxy
+* e1776fd Call Genie (ask_data) as the app SP + bind the Genie space
+* f595879 Diagnose MLflow trace-data upload egress + fix span name
+* f2eda45 Fix MLflow trace export: bind experiment + export via OAuth only
+* 62fdc1a Call the model endpoint as the app SP (bind serving endpoint)
+* 48ab4a1 Fix app OBO scopes: declare user_api_scopes on the app resource
+* d6c0dca M3 Phase B: port the app to the Volta plant-floor domain + deploy
+* e89d8cf (origin/main, main) M3 app: pin openai ^7 (match @openai/agents), fix searchParts import alias; server typecheck passes
+* 0f76dec M3 app: add app to root bundle (resources.apps + warehouse/Lakebase bindings, artifact build, sync); reconstruct package.json
+* 9f8e6e2 M3 app: implement agent tools (find_atrisk_line, rank_maintenance_actions, search_parts, execute_maintenance_action) + query helpers
+* 15a481b refresh git_history.txt
+* 0275246 Build 1 evidence: add build-as-code constructs (DAB sync, scale-to-zero, Lakebase Search, CDF) + live execution evidence inside submission1/
+* f57448d refresh git_history.txt
+* ff8c04b Build 1 evidence: add branch forecast execution (next_shift_forecast) to notebook + evidence
+* 778c9ec refresh git_history.txt with latest evidence commits
+* 1f01b0b Build 1 evidence: executed notebook + execution-evidence artifacts (schema+keys, relational joins, writable vs read-only synced)
+* eb2a2e3 M2 reverse sync: fix CDF parent path (/databases/) + snake_case id; verified end-to-end
+* 0b5c0e7 M2 reverse sync: define Lakebase CDF (Postgres->UC Delta) as code (CLI/API)
+*   dafc9b0 Merge branch 'dev': promote next_shift_forecast migration to main
+|\  
+| * 326ddf5 (dev) agent change: add next_shift_forecast migration (developed on Lakebase dev branch)
+|/  
+* 119f3de M2 Lakebase Search: gold_parts + parts sync + BM25/vector search setup
+* f353fd5 M2 Lakebase: autoscaling project + UC->Lakebase synced tables (bundle-managed)
+* 1323dd2 M1 governance + BI: mv_line_risk metric view, Genie space, AI/BI dashboard
+* f1b6c85 M1 data: SDP pipeline (silver + gold, ai_classify note-risk, maintenance heuristic)
+* dcd88c2 Import Volta Industrial workshop template (as provided)

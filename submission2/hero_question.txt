@@ -1,0 +1,48 @@
+HERO QUESTION (Volta Plant Floor — Build 2, the agent app)
+===========================================================
+
+Customer's hero question (asked in the assistant dock):
+
+  "Something is off with LINE-04. Find the worst at-risk line, explain what's
+   driving the failure risk using the plant data, then rank the maintenance
+   actions with the model — pull now, run to shift end, or expedite the part —
+   and show me the net value of each. Check whether the needed part is in local
+   stock. Recommend the best action and wait for my approval. Once I say go,
+   cut the work order."
+
+The agent investigated and surfaced the WORST at-risk line, then drove the full
+investigate -> rank (what-if) -> draft -> approve -> write-back arc.
+
+
+DECISION CHAIN — linked record IDs across the exports
+-----------------------------------------------------
+  hero line ............ LINE-0928         (line_status.id = LINE-0928:PLANT-08)
+  plant ................ PLANT-08
+  current_status ....... critical          (failure_risk_score 0.95)
+  downtime_exposure .... $41,800
+  candidate part ....... PART-00079        (part_local = false, lead_time_days = 6)
+  recommended_action ... pull_now          (ranked net value +$43,600; run_to_shift_end
+                                            -$75,600; expedite_parts_and_run -$32,764.11)
+  work_order_id ........ 4952bea5-a0ba-4337-83d2-0030e8b87283
+                         (app.work_orders_app; status approved, approver
+                         manffred.calvosanchez@databricks.com, created +
+                         committed 2026-08-31T18:49:14Z)
+
+
+HOW THE CHAIN FLOWS THROUGH THE EXPORTS
+---------------------------------------
+  view_result.json ..... LINE-0928 is the top row of the live line-queue view
+                         (worst downtime exposure first) — where the operator
+                         spots it.
+  assist_log.jsonl ..... the "what_if" run: find_atrisk_line + ask_data (Genie)
+                         + rank_maintenance_actions produce the driver summary and
+                         the ranked net values for LINE-0928. (A second "explanation"
+                         run covers LINE-04 / LINE-0004.)
+  drafted_sample.md .... the agent's auto-drafted preventive-maintenance work-order
+                         memo for LINE-0928 / PART-00079.
+  writeback_table.json . the approved work order the agent writes to the app-owned
+                         app.work_orders_app (proposed action pull_now, approval
+                         status + approver, created + committed timestamps).
+  state_table.json ..... the trigger events (operator turns) + recorded decisions
+                         (assistant turns, the tool calls, and the committed
+                         work-order audit entry) with timestamps.
