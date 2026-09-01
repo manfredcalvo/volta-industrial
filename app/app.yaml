@@ -44,11 +44,12 @@ env:
   # placeholder resolution.
   - name: WAREHOUSE_ID
     valueFrom: sql-warehouse
-  # The agent-trace MLflow experiment id, from the bound `experiment` app
-  # resource (databricks.yml). server.ts prefers this over deriving+creating
-  # the experiment, and the SP's CAN_EDIT lets the exporter write via OAuth.
+  # MLflow experiment id. During the volta-sandbox migration the `experiment`
+  # app-resource binding is removed, so this is empty → server.ts self-derives
+  # /Shared/solution_builder/<app_name>-agent-traces at boot. Re-add the
+  # `experiment` binding + valueFrom once the experiment is recreated.
   - name: MLFLOW_EXPERIMENT_ID
-    valueFrom: experiment
+    value: ""
 
   # ── Plain values (set statically) ───────────────────────────────────
   # Normally finalize_app.sh harvests these from the setup job's
@@ -61,13 +62,13 @@ env:
   # Genie-only data backend: GENIE_SPACE_ID set, MAS_ENDPOINT_NAME empty
   # (plantfloor.ts makeTools registers askData against the Genie space).
   - name: GENIE_SPACE_ID
-    value: "01f1a423e4f41fc889a1153328060aa4"
+    value: "01f1a5be270711da9b1c0609174bb1ef"
   - name: MAS_ENDPOINT_NAME
     value: ""
   - name: DASHBOARD_ID
-    value: "01f1a4275b941d759767cfd2fb855d18"
+    value: "01f1a5be658f193cafa4f33defbef793"
   - name: PIPELINE_ID
-    value: "e0e76340-2ad7-4235-9e46-88228b501ac7"
+    value: "10878acd-b243-4cb7-bdf9-eb830cd9e701"
   - name: LAKEBASE_PROJECT_ID
     value: "volta-plant-floor"
   # Empty → the app self-derives /Shared/solution_builder/<app_name>-agent-traces

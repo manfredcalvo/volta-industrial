@@ -190,23 +190,18 @@ resources:
           serving_endpoint:
             name: databricks-gpt-5-4
             permission: CAN_QUERY
-        # The agent-trace MLflow experiment (created at first boot at
-        # /Shared/solution_builder/volta-plant-floor-agent-traces). Binding it
-        # grants the app SP CAN_EDIT so the mlflow-tracing exporter can write
-        # traces via OAuth (m2m) alone — no PAT/token override, which is what
-        # caused the "more than one authorization method: oauth and pat" export
-        # failures. valueFrom injects MLFLOW_EXPERIMENT_ID (see app.yaml).
-        - name: experiment
-          experiment:
-            experiment_id: "42200714304546"
-            permission: CAN_EDIT
-        # The Genie space the agent's ask_data tool queries. Bound so the app
-        # SP has CAN_RUN — the tool authenticates as the SP (see genie.ts /
-        # serviceAuthHeaders), sidestepping the OBO `genie` scope check.
+        # NOTE (volta-sandbox migration): the `experiment` and `genie-space`
+        # app-resource bindings are re-added AFTER those resources are recreated
+        # in the new workspace (the old-workspace IDs 42200714304546 /
+        # 01f1a423e4f41fc889a1153328060aa4 404 here). See the migration steps.
+        # - name: experiment
+        #   experiment:
+        #     experiment_id: "<new-experiment-id>"
+        #     permission: CAN_EDIT
         - name: genie-space
           genie_space:
             name: genie-space
-            space_id: "01f1a423e4f41fc889a1153328060aa4"
+            space_id: "01f1a5be270711da9b1c0609174bb1ef"
             permission: CAN_RUN
         - name: postgres
           postgres:
