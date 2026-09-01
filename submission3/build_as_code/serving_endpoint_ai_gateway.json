@@ -1,0 +1,36 @@
+{
+  "_comment": "Serving-endpoint spec that enables the AI Gateway inference table via AUTO-CAPTURE (ai_gateway.inference_table_config). This is the classic serving-endpoint form of the gateway; the deployed Volta gateway uses the newer AI Gateway *model service* (see ../gateway_service.txt), which enables the same inference-table auto-capture via config.inference_table. Deploy with: databricks serving-endpoints create --json @serving_endpoint_ai_gateway.json --profile <p>. The external_model proxies databricks-gpt-5-4 via an OpenAI-compatible base using a secret-scoped token (never inline).",
+  "name": "volta-gpt-gateway-endpoint",
+  "config": {
+    "served_entities": [
+      {
+        "name": "gpt-5-4",
+        "external_model": {
+          "name": "databricks-gpt-5-4",
+          "provider": "openai",
+          "task": "llm/v1/chat",
+          "openai_config": {
+            "openai_api_base": "https://fevm-serverless-stable-casaman.cloud.databricks.com/serving-endpoints",
+            "openai_api_key": "{{secrets/volta_gateway/proxy_token}}"
+          }
+        }
+      }
+    ]
+  },
+  "ai_gateway": {
+    "inference_table_config": {
+      "enabled": true,
+      "catalog_name": "serverless_stable_casaman_catalog",
+      "schema_name": "dev_manffred_calvosanchez_volta_industrial",
+      "table_name_prefix": "volta_serving_inference"
+    },
+    "usage_tracking_config": { "enabled": true },
+    "rate_limits": [
+      { "calls": 200, "renewal_period": "minute", "key": "endpoint" }
+    ],
+    "guardrails": {
+      "input": { "pii": { "behavior": "BLOCK" } },
+      "output": { "pii": { "behavior": "BLOCK" } }
+    }
+  }
+}
