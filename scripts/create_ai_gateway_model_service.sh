@@ -75,7 +75,7 @@ DBX ai-gateway update-model-service "$NAME" config.rate_limits --json '{
 
 echo "[gw] grant the app service principal EXECUTE on the model service"
 DBX grants update model_service "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.$SERVICE_ID" \
-  --json '{"changes":[{"principal":"189e02a2-c9f9-46af-8900-55de599fa319","add":["EXECUTE"]}]}'
+  --json '{"changes":[{"principal":"e951229d-5569-44e0-a6ba-04da12135ecd","add":["EXECUTE"]}]}'
 
 echo "[gw] final config:"
 DBX ai-gateway get-model-service "$NAME" -o json
