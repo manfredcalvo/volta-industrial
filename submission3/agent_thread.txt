@@ -1,0 +1,27 @@
+Build 3 — coding-agent + MCP evidence (agent_thread.txt)
+========================================================
+
+STATUS: FOLLOW-UP (deferred). Build 3's app-side governance is complete and
+evidenced (see gateway_service.txt, app_inference_table.json,
+gateway_usage.lvdash.json). This item — the coding-agent thread — requires a
+separate workstream that isn't stood up yet:
+
+  - a coding agent (ucode) that routes its model calls through the Unity AI
+    Gateway (ucode is not installed in this environment),
+  - a governed MCP service created via `databricks ai-gateway create-mcp-service`
+    (none exist in this schema yet),
+  - a Slack MCP server + Slack token, and the agent calling the Slack MCP.
+
+When set up, this file will contain the coding-agent thread showing:
+  1. the call to ucode (the coding agent invocation),
+  2. the MCP configuration (the governed MCP service + how the agent is wired to it),
+  3. the agent calling the Slack MCP.
+
+NOTE: `system.ai_gateway.usage` (workspace-wide) already records MCP_SERVICE and
+coding-agent (ucode/codex) traffic across the workspace — the usage dashboard
+(gateway_usage.lvdash.json) is built to span all three workload types
+(MODEL_SERVICE / MCP_SERVICE / MODEL_PROVIDER_SERVICE), so it populates the
+coding-agent + MCP columns as soon as this workstream's own usage exists.
+
+The optional agent_inference_table.json (the coding agent's own inference table,
+distinct from the app's) is part of this same follow-up.

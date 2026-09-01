@@ -391,7 +391,11 @@ export async function configureAgentsSdk(ctx: AgentContext): Promise<void> {
   // ──────────────────────────────────────────────────────────────────
   const client = new OpenAI({
     apiKey: bearer,
-    baseURL: `${ctx.databricksHost}/serving-endpoints`,
+    // Route model calls through the Unity AI Gateway (M4): the model service
+    // (ctx.model = its UC name) governs the call — spend cap, guardrails,
+    // inference logging — and forwards to databricks-gpt-5-4. The gateway
+    // serves the Responses API here, so the reasoning stream is preserved.
+    baseURL: `${ctx.databricksHost}/ai-gateway/openai/v1`,
     maxRetries: 4,
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers);

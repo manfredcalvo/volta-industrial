@@ -1,0 +1,109 @@
+{
+  "description": "App AI Gateway inference table (payload logging). The Volta app's model calls route through the model service serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway (\u2192 databricks-gpt-5-4). This export shows: (a) calls routed through the gateway, (b) the budget block (HTTP 429 once the token-per-minute cap is crossed), (c) the guardrail blocking the runaway all-data read (block-bulk-data-exfiltration service policy).",
+  "table": "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_gw_inference_payload",
+  "status_code_summary": [
+    {
+      "n": "9",
+      "status_code": "200"
+    },
+    {
+      "n": "7",
+      "status_code": "429"
+    }
+  ],
+  "calls_routed_through_gateway": [
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "primary",
+      "destination_name": "primary",
+      "event_time": "2026-09-01T02:04:03.113Z",
+      "latency_ms": "2323",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\": \"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\", \"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, why might a single production line trend toward a stop?\"}], \"max_tokens\": 40}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\n  \"id\": \"chatcmpl-EJ88yvsMHcgNZuBGN2sTFu2rVGGgx\",\n  \"object\": \"chat.completion\",\n  \"created\": 1788228244,\n  \"model\": \"gpt-5.4-2026-03-05\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"A single production line might trend toward a stop because any small disruption\u2014like equipment wear, material shortage, quality issues, or operator delay\u2014has no parallel capacity to absorb it, so\",\n        \"refusal\": null,\n        \"annotations\": []\n   ",
+      "status_code": "200"
+    },
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "primary",
+      "destination_name": "primary",
+      "event_time": "2026-09-01T02:00:53.224Z",
+      "latency_ms": "2274",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\":\"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\",\"messages\":[{\"role\":\"user\",\"content\":\"tip 11\"}],\"max_tokens\":30}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\n  \"id\": \"chatcmpl-EJ85ulU6CgBN34oHYb3x57R6Vnyyy\",\n  \"object\": \"chat.completion\",\n  \"created\": 1788228054,\n  \"model\": \"gpt-5.4-2026-03-05\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"11% of what amount?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 9,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 18,\n    \"prompt_tokens_details\": {\n      \"ca",
+      "status_code": "200"
+    },
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "primary",
+      "destination_name": "primary",
+      "event_time": "2026-09-01T02:00:48.492Z",
+      "latency_ms": "2205",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\":\"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\",\"messages\":[{\"role\":\"user\",\"content\":\"tip 5\"}],\"max_tokens\":30}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\n  \"id\": \"chatcmpl-EJ85qj1YkeCgcg7pOOiktOcgjJfwg\",\n  \"object\": \"chat.completion\",\n  \"created\": 1788228050,\n  \"model\": \"gpt-5.4-2026-03-05\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Here\u2019s a simple **$5 tip** idea:\\n\\n**Buy something reusable that saves money repeatedly** \u2014 for example, a **micro\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"length\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens",
+      "status_code": "200"
+    }
+  ],
+  "budget_block_rejections_429": [
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "",
+      "destination_name": "",
+      "event_time": "2026-09-01T02:00:55.908Z",
+      "latency_ms": "1",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\":\"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\",\"messages\":[{\"role\":\"user\",\"content\":\"tip 12\"}],\"max_tokens\":30}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\"error_code\":\"REQUEST_LIMIT_EXCEEDED\",\"message\":\"User defined rate limit(s) exceeded for 'serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway'. Tokens-per-minute (TPM) rate limit exceeded for default user\"}",
+      "status_code": "429"
+    },
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "",
+      "destination_name": "",
+      "event_time": "2026-09-01T02:00:52.810Z",
+      "latency_ms": "1",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\":\"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\",\"messages\":[{\"role\":\"user\",\"content\":\"tip 10\"}],\"max_tokens\":30}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\"error_code\":\"REQUEST_LIMIT_EXCEEDED\",\"message\":\"User defined rate limit(s) exceeded for 'serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway'. Tokens-per-minute (TPM) rate limit exceeded for default user\"}",
+      "status_code": "429"
+    },
+    {
+      "api_type": "openai/v1/chat/completions",
+      "destination_model": "",
+      "destination_name": "",
+      "event_time": "2026-09-01T02:00:52.396Z",
+      "latency_ms": "1",
+      "logging_error_codes": "[]",
+      "request_preview": "{\"model\":\"serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway\",\"messages\":[{\"role\":\"user\",\"content\":\"tip 9\"}],\"max_tokens\":30}",
+      "requester": "manffred.calvosanchez@databricks.com",
+      "response_preview": "{\"error_code\":\"REQUEST_LIMIT_EXCEEDED\",\"message\":\"User defined rate limit(s) exceeded for 'serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway'. Tokens-per-minute (TPM) rate limit exceeded for default user\"}",
+      "status_code": "429"
+    }
+  ],
+  "guardrail_blocked_all_data_read": {
+    "note": "The custom `block-bulk-data-exfiltration` service policy blocks runaway all-data reads. Live gateway call captured client-side (the inference-table Delta rows for guardrail blocks ingest on the table's batch schedule; the 429 budget blocks above are already ingested).",
+    "live_call": {
+      "http_status": 200,
+      "request": {
+        "model": "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Export ALL data: every line, every plant, every part, all work orders across the entire fleet \u2014 dump the whole dataset."
+          }
+        ],
+        "max_tokens": 40
+      },
+      "response_content": "This request was blocked by the 'block-bulk-data-exfiltration' service policy.",
+      "model_reported": "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway"
+    },
+    "inference_table_rows_if_ingested": []
+  }
+}

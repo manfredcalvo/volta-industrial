@@ -1,0 +1,204 @@
+{
+  "datasets": [
+    {
+      "name": "ds_totals",
+      "displayName": "Gateway totals (30d, model services)",
+      "queryLines": [
+        "SELECT",
+        "  COUNT(*) AS calls,",
+        "  SUM(CAST(total_tokens AS BIGINT)) AS tokens,",
+        "  SUM(CASE WHEN status_code = 429 THEN 1 ELSE 0 END) AS budget_blocks",
+        "FROM system.ai_gateway.usage",
+        "WHERE service_type = 'MODEL_SERVICE'",
+        "  AND event_time > current_timestamp() - INTERVAL 30 DAYS"
+      ]
+    },
+    {
+      "name": "ds_by_type",
+      "displayName": "Usage by workload type (app / coding agent / MCP)",
+      "queryLines": [
+        "SELECT",
+        "  CASE WHEN service_type = '' THEN 'FM serving endpoint' ELSE service_type END AS workload_type,",
+        "  COUNT(*) AS calls,",
+        "  SUM(CAST(total_tokens AS BIGINT)) AS tokens",
+        "FROM system.ai_gateway.usage",
+        "WHERE event_time > current_timestamp() - INTERVAL 30 DAYS",
+        "GROUP BY 1",
+        "ORDER BY calls DESC"
+      ]
+    },
+    {
+      "name": "ds_top_services",
+      "displayName": "Top model services by tokens (30d)",
+      "queryLines": [
+        "SELECT service_name, COUNT(*) AS calls, SUM(CAST(total_tokens AS BIGINT)) AS tokens",
+        "FROM system.ai_gateway.usage",
+        "WHERE service_type = 'MODEL_SERVICE'",
+        "  AND event_time > current_timestamp() - INTERVAL 30 DAYS",
+        "GROUP BY service_name",
+        "ORDER BY tokens DESC NULLS LAST",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "ds_status",
+      "displayName": "Status codes (200 vs 429 budget block)",
+      "queryLines": [
+        "SELECT CAST(status_code AS STRING) AS status_code, COUNT(*) AS n",
+        "FROM system.ai_gateway.usage",
+        "WHERE service_type = 'MODEL_SERVICE'",
+        "  AND event_time > current_timestamp() - INTERVAL 30 DAYS",
+        "GROUP BY status_code",
+        "ORDER BY n DESC"
+      ]
+    },
+    {
+      "name": "ds_app",
+      "displayName": "Volta app — calls through the gateway",
+      "queryLines": [
+        "SELECT event_time, api_type, destination_model, CAST(status_code AS STRING) AS status_code, CAST(total_tokens AS BIGINT) AS total_tokens, requester",
+        "FROM system.ai_gateway.usage",
+        "WHERE service_name = 'serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.volta_ai_gateway'",
+        "ORDER BY event_time DESC",
+        "LIMIT 50"
+      ]
+    },
+    {
+      "name": "ds_spend",
+      "displayName": "External model spend (budget)",
+      "queryLines": [
+        "SELECT usage_date, usage_unit, SUM(CAST(usage_quantity AS DOUBLE)) AS quantity",
+        "FROM system.ai_gateway.external_model_spend",
+        "WHERE usage_date > current_date() - INTERVAL 30 DAYS",
+        "GROUP BY usage_date, usage_unit",
+        "ORDER BY usage_date"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "gateway_usage",
+      "displayName": "AI Gateway usage & budgets",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Unity AI Gateway — usage & budgets\n",
+                "Tracks calls, tokens, and budget blocks across gateway workloads — the app (model services), coding agents, and MCP services — from `system.ai_gateway.usage`. The Volta app routes through the `volta_ai_gateway` model service."
+              ]
+            }
+          },
+          "position": { "x": 0, "y": 0, "width": 12, "height": 2 }
+        },
+        {
+          "widget": {
+            "name": "kpi_calls",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_totals", "fields": [ { "name": "sum(calls)", "expression": "SUM(`calls`)" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 2, "widgetType": "counter",
+              "encodings": { "value": { "fieldName": "sum(calls)", "displayName": "Model-service calls (30d)", "format": { "type": "number-plain", "abbreviation": "compact", "decimalPlaces": { "type": "max", "places": 1 } } } },
+              "frame": { "title": "Model-service calls (30d)", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 2, "width": 4, "height": 3 }
+        },
+        {
+          "widget": {
+            "name": "kpi_tokens",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_totals", "fields": [ { "name": "sum(tokens)", "expression": "SUM(`tokens`)" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 2, "widgetType": "counter",
+              "encodings": { "value": { "fieldName": "sum(tokens)", "displayName": "Tokens (30d)", "format": { "type": "number-plain", "abbreviation": "compact", "decimalPlaces": { "type": "max", "places": 1 } } } },
+              "frame": { "title": "Tokens (30d)", "showTitle": true }
+            }
+          },
+          "position": { "x": 4, "y": 2, "width": 4, "height": 3 }
+        },
+        {
+          "widget": {
+            "name": "kpi_budget_blocks",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_totals", "fields": [ { "name": "sum(budget_blocks)", "expression": "SUM(`budget_blocks`)" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 2, "widgetType": "counter",
+              "encodings": { "value": { "fieldName": "sum(budget_blocks)", "displayName": "Budget blocks (429, 30d)", "format": { "type": "number-plain", "abbreviation": "compact", "decimalPlaces": { "type": "max", "places": 0 } } } },
+              "frame": { "title": "Budget blocks (429, 30d)", "showTitle": true }
+            }
+          },
+          "position": { "x": 8, "y": 2, "width": 4, "height": 3 }
+        },
+        {
+          "widget": {
+            "name": "bar_by_type",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_by_type", "fields": [ { "name": "workload_type", "expression": "`workload_type`" }, { "name": "sum(calls)", "expression": "SUM(`calls`)" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 3, "widgetType": "bar",
+              "encodings": {
+                "x": { "fieldName": "workload_type", "scale": { "type": "categorical" }, "displayName": "Workload type" },
+                "y": { "fieldName": "sum(calls)", "scale": { "type": "quantitative" }, "displayName": "Calls" }
+              },
+              "frame": { "title": "Calls by workload type (app / coding agent / MCP)", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 5, "width": 6, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "bar_top_services",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_top_services", "fields": [ { "name": "service_name", "expression": "`service_name`" }, { "name": "sum(tokens)", "expression": "SUM(`tokens`)" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 3, "widgetType": "bar",
+              "encodings": {
+                "x": { "fieldName": "service_name", "scale": { "type": "categorical" }, "displayName": "Model service" },
+                "y": { "fieldName": "sum(tokens)", "scale": { "type": "quantitative" }, "displayName": "Tokens" }
+              },
+              "frame": { "title": "Top model services by tokens (30d)", "showTitle": true }
+            }
+          },
+          "position": { "x": 6, "y": 5, "width": 6, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "tbl_status",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_status", "fields": [ { "name": "status_code", "expression": "`status_code`" }, { "name": "n", "expression": "`n`" } ], "disaggregated": false } }
+            ],
+            "spec": {
+              "version": 1, "widgetType": "table",
+              "encodings": { "columns": [ { "fieldName": "status_code", "displayName": "HTTP status" }, { "fieldName": "n", "displayName": "Count" } ] },
+              "frame": { "title": "Status codes (429 = budget block)", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 11, "width": 6, "height": 5 }
+        },
+        {
+          "widget": {
+            "name": "tbl_app",
+            "queries": [
+              { "name": "main_query", "query": { "datasetName": "ds_app", "fields": [ { "name": "event_time", "expression": "`event_time`" }, { "name": "api_type", "expression": "`api_type`" }, { "name": "destination_model", "expression": "`destination_model`" }, { "name": "status_code", "expression": "`status_code`" }, { "name": "total_tokens", "expression": "`total_tokens`" }, { "name": "requester", "expression": "`requester`" } ], "disaggregated": true } }
+            ],
+            "spec": {
+              "version": 1, "widgetType": "table",
+              "encodings": { "columns": [ { "fieldName": "event_time", "displayName": "Time" }, { "fieldName": "api_type", "displayName": "API" }, { "fieldName": "destination_model", "displayName": "Model" }, { "fieldName": "status_code", "displayName": "Status" }, { "fieldName": "total_tokens", "displayName": "Tokens" }, { "fieldName": "requester", "displayName": "Requester" } ] },
+              "frame": { "title": "Volta app — calls through the gateway", "showTitle": true }
+            }
+          },
+          "position": { "x": 6, "y": 11, "width": 6, "height": 5 }
+        }
+      ]
+    }
+  ]
+}

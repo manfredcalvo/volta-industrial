@@ -24,10 +24,13 @@
   "masEndpointName": "${MAS_ENDPOINT_NAME:}",
   "genieSpaceId":    "${GENIE_SPACE_ID:}",
 
-  // Agent LLM. Needs the Responses API (openai/v1/responses). databricks-gpt-5-4
-  // is the baseline; a newer GPT endpoint with /responses enabled works too.
-  // Non-Responses models (Claude etc.) 400 BAD_REQUEST.
-  "agentModel": "databricks-gpt-5-4",
+  // Agent LLM — routed through the Unity AI Gateway model service (M4), which
+  // governs the call (spend cap, guardrails, inference logging) and forwards to
+  // databricks-gpt-5-4. The value is the model service's UC name; the client
+  // posts to the /ai-gateway/openai/v1 base (see server/agent/plantfloor.ts
+  // configureAgentsSdk). The gateway serves the Responses API, so the reasoning
+  // stream is preserved.
+  "agentModel": "${DEMO_CATALOG}.${DEMO_SCHEMA}.volta_ai_gateway",
 
   // MLflow trace path. Empty → chat shows "Trace pending…". Auto-created
   // at boot via lib/mlflow.ts.
