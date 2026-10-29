@@ -31,6 +31,9 @@ variables:
   warehouse_id:
     description: SQL warehouse the app uses (analytics + boot-time Delta→Lakebase sync).
     default: a950531e6997adb4
+  genie_space_id:
+    description: Genie space the app's ask_data tool queries (created after the gold tables exist).
+    default: "01f1a5be270711da9b1c0609174bb1ef"
 
 resources:
   schemas:
@@ -67,6 +70,36 @@ resources:
               - numpy
               - pandas
               - faker
+
+    # Refresh → learn → serve. Rebuilds silver/gold, then retrains failure_recommender on the
+    # fresh gold_maintenance_outcomes, promotes it to @prod, batch-scores
+    # gold_maintenance_recommendations, and rolls the serving endpoint to the new version.
+    volta_ml_refresh:
+      name: "[Volta] Plant floor — refresh pipeline + retrain/serve failure_recommender"
+      description: "SDP refresh → MLflow train (Optuna) → UC register @prod → batch score → serving endpoint + AI Gateway."
+      tasks:
+        - task_key: refresh_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.volta_plant_floor.id}
+        # Serverless notebook tasks; each notebook pins its own deps via %pip.
+        - task_key: train_register
+          depends_on:
+            - task_key: refresh_pipeline
+          notebook_task:
+            notebook_path: ./ml/train_register.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.demo_schema.name}
+        # Scores + serves whatever holds @prod, so it can rerun without retraining.
+        - task_key: score_serve
+          depends_on:
+            - task_key: train_register
+          notebook_task:
+            notebook_path: ./ml/score_serve.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.demo_schema.name}
+              endpoint_name: volta-failure-recommender
 
   # SDP pipeline (specifications/01-lakeflow.md → Section B): reads the raw_data parquet via
   # read_files(), builds silver (incl. the ai_classify note-risk dedup MV) + gold, and produces
@@ -190,6 +223,12 @@ resources:
           serving_endpoint:
             name: databricks-gpt-5-4
             permission: CAN_QUERY
+        # The failure_recommender model endpoint (ml/train_register.py + ml/score_serve.py) —
+        # the predict_action_value what-if tool calls it as the SP.
+        - name: recommender-endpoint
+          serving_endpoint:
+            name: volta-failure-recommender
+            permission: CAN_QUERY
         # NOTE (volta-sandbox migration): the `experiment` and `genie-space`
         # app-resource bindings are re-added AFTER those resources are recreated
         # in the new workspace (the old-workspace IDs 42200714304546 /
@@ -201,7 +240,7 @@ resources:
         - name: genie-space
           genie_space:
             name: genie-space
-            space_id: "01f1a5be270711da9b1c0609174bb1ef"
+            space_id: ${var.genie_space_id}
             permission: CAN_RUN
         - name: postgres
           postgres:
@@ -237,5 +276,14 @@ targets:
   dev:
     mode: development
     default: true
+  # FE Bar build workspace. Same dev-mode schema prefix (dev_<user>_volta_industrial).
+  casaman:
+    mode: development
+    workspace:
+      host: https://fevm-casaman-aws-stable.cloud.databricks.com
+    variables:
+      catalog: casaman_aws_stable_catalog
+      warehouse_id: d9ce200bcd25d8a2
+      genie_space_id: "01f1d3ebd22919d3ab58c599e15a50d9"
   prod:
     mode: production

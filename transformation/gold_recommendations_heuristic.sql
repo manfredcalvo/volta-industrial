@@ -1,10 +1,12 @@
--- gold_maintenance_recommendations — the ranked action per open at-risk line, built by the
--- pipeline HEURISTIC (ML optional, 03-ml-maintenance.md overwrites this same table).
+-- gold_recommendations_heuristic — the template's hand-coded ranking, KEPT ONLY AS A BASELINE.
+-- The served recommendation is now gold_maintenance_recommendations, written by the MLflow
+-- failure_recommender model (ml/train_register.py + ml/score_serve.py). The training notebook compares its
+-- picks against this table (agreement rate + hero check) so the model swap is auditable.
 -- For each line, construct three candidate actions and rank by net = avoided − action_cost.
 -- part_local is the key lever: expediting a non-local part is slow AND costly, which is what
 -- makes pull_now the right call for the hero (LINE-0004, high risk, non-local part), while
 -- expedite_parts_and_run wins on moderate-risk lines whose part IS local.
-CREATE OR REFRESH MATERIALIZED VIEW gold_maintenance_recommendations AS
+CREATE OR REFRESH MATERIALIZED VIEW gold_recommendations_heuristic AS
 WITH base AS (
   SELECT
     line_id,
