@@ -57,6 +57,7 @@ export async function streamAgentTurn(args: {
    * Genie — see plantfloor.ts AgentContext for the matching change. */
   masEndpointName: string;
   genieSpaceId: string;
+  recommenderEndpoint: string;
   databricksHost: string;
   model: string;
   messages: Msg[];
@@ -119,6 +120,7 @@ export async function streamAgentTurn(args: {
       req: args.req,
       masEndpointName: args.masEndpointName,
       genieSpaceId: args.genieSpaceId,
+      recommenderEndpoint: args.recommenderEndpoint,
       databricksHost: args.databricksHost,
       model: args.model,
       modelError,

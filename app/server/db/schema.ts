@@ -157,6 +157,9 @@ export const openAtrisk = appSchema.table(
     partLocal: boolean('part_local').notNull(),
     candidatePartId: text('candidate_part_id'),
     partLeadTimeDays: integer('part_lead_time_days'),
+    // Model features for the live failure_recommender what-if (predict_action_value).
+    machineType: text('machine_type'),
+    criticality: text('criticality'),
   },
   (t) => [
     index('open_atrisk_risk_idx').on(t.failureRiskScore),

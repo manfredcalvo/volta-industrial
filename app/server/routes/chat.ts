@@ -27,6 +27,8 @@ type Deps = {
      * and in plantfloor.ts. See server/agent/tools/{mas,genie}.ts. */
     masEndpointName: string;
     genieSpaceId: string;
+    /** failure_recommender serving endpoint (predict_action_value tool). */
+    recommenderEndpoint: string;
     agentModel?: string;
   };
 };

@@ -105,11 +105,13 @@ export async function syncFromDelta(
       part_local: boolean;
       candidate_part_id: string | null;
       part_lead_time_days: number | null;
+      machine_type: string | null;
+      criticality: string | null;
     }>(
       warehouseId,
       `SELECT line_id, plant_id, line_name, failure_risk_score,
               downtime_exposure_usd, part_local, candidate_part_id,
-              part_lead_time_days
+              part_lead_time_days, machine_type, criticality
        FROM ${fq('openAtrisk')}`,
     ),
     hasRecTable
@@ -194,6 +196,8 @@ export async function syncFromDelta(
           partLocal: r.part_local,
           candidatePartId: r.candidate_part_id,
           partLeadTimeDays: r.part_lead_time_days,
+          machineType: r.machine_type,
+          criticality: r.criticality,
         })),
       ).onConflictDoNothing(),
     );

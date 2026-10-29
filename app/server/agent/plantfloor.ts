@@ -49,6 +49,7 @@ import {
   worstAtriskLine,
   getLineStatus,
   getRecommendation,
+  getAtriskFeatures,
   searchParts as searchPartsQuery,
   recordMaintenanceAction,
 } from '../db/queries/maintenance.js';
@@ -58,6 +59,7 @@ import {
 // preserves the template's MAS-OR-Genie flexibility exactly.
 import { callMasEndpoint } from './tools/mas.js';
 import { callGenieSpace } from './tools/genie.js';
+import { scoreScenario } from './tools/recommender.js';
 export type { ToolProgressEvent } from './tools/types.js';
 
 /** Captured detail of the last failing call to the model serving endpoint. */
@@ -81,6 +83,9 @@ export type AgentContext = {
   /** Genie space id the `ask_data` tool talks to WHEN `masEndpointName` is
    * empty. Set as `genieSpaceId` (env `GENIE_SPACE_ID`). */
   genieSpaceId: string;
+  /** Serving endpoint for the failure_recommender MLflow model (`@prod`).
+   * Empty → the predict_action_value what-if tool isn't registered. */
+  recommenderEndpoint: string;
   databricksHost: string;
   model: string;
   /** Called by long-running tools to surface progress to the UI. */
@@ -100,6 +105,12 @@ export type AgentContext = {
 // Every field needs a `.describe(...)`. Keep property names snake_case.
 // Use the `loggedTool` wrapper (imported as `tool`), not the raw SDK `tool`.
 // ────────────────────────────────────────────────────────────────────────────
+/** Users say "LINE-04"; line ids are zero-padded to 4 digits ("LINE-0004"). */
+function normalizeLineId(id: string): string {
+  const m = /^line[-_ ]?(\d+)$/i.exec(id.trim());
+  return m ? `LINE-${m[1].padStart(4, '0')}` : id.trim();
+}
+
 function makeTools(ctx: AgentContext): Tool[] {
   // ── ask_data — SHIPS WORKING. Config-driven MAS-OR-Genie. ─────────────────
   // Delegates to the MAS endpoint if one is configured, else the Genie space.
@@ -155,7 +166,7 @@ function makeTools(ctx: AgentContext): Tool[] {
     execute: async ({ line_id }) =>
       mlflow.withSpan(
         async () => {
-          let id = line_id;
+          let id = line_id ? normalizeLineId(line_id) : null;
           if (!id) {
             const worst = await worstAtriskLine(ctx.db);
             if (!worst) return { found: false };
@@ -194,14 +205,14 @@ function makeTools(ctx: AgentContext): Tool[] {
   const rankMaintenanceActions = tool({
     name: 'rank_maintenance_actions',
     description:
-      "Read the ML maintenance model's ranked actions for a line from Lakebase app.maintenance_recommendations: the recommended action, its predicted downtime cost avoided, and the full ranking of all three options (pull_now / run_to_shift_end / expedite_parts_and_run) with each option's downtime cost and net value. Read-only. Quote these in the draft; do the what-if arithmetically from the ranking.",
+      "Read the ML maintenance model's ranked actions for a line from Lakebase app.maintenance_recommendations: the recommended action, its predicted downtime cost avoided, and the full ranking of all three options (pull_now / run_to_shift_end / expedite_parts_and_run) with each option's downtime cost and net value. Read-only. Quote these in the draft; for what-if scenarios call predict_action_value.",
     parameters: z.object({
       line_id: z.string().describe('Line id, e.g. LINE-04.'),
     }),
     execute: async ({ line_id }) =>
       mlflow.withSpan(
         async () => {
-          const rec = await getRecommendation(ctx.db, line_id);
+          const rec = await getRecommendation(ctx.db, normalizeLineId(line_id));
           if (!rec) {
             return {
               scored: false,
@@ -224,6 +235,60 @@ function makeTools(ctx: AgentContext): Tool[] {
           name: 'rank_maintenance_actions',
           spanType: mlflow.SpanType.TOOL,
           inputs: { line_id },
+        },
+      ),
+  });
+
+  // ── predict_action_value — live what-if against the served model. ─────────
+  // rank_maintenance_actions reads the BATCH ranking (line as it is now).
+  // This tool re-scores the line on the failure_recommender serving endpoint
+  // with overrides (part_local, risk_at_action) so the agent can answer
+  // "what if…" with the model instead of doing arithmetic on the batch rows.
+  const predictActionValue = tool({
+    name: 'predict_action_value',
+    description:
+      "LIVE what-if on the failure_recommender ML model (serving endpoint, governed by AI Gateway). Re-scores pull_now / run_to_shift_end / expedite_parts_and_run for a line, optionally overriding the part locality or the failure risk, and returns each option's predicted downtime cost avoided, action cost and net value, best first. Use for questions like 'what if the part were local?' or 'what if risk climbs to 0.95?'. Read-only.",
+    parameters: z.object({
+      line_id: z.string().describe('Line id, e.g. LINE-0004.'),
+      part_local_override: z
+        .boolean()
+        .nullable()
+        .describe('Scenario: pretend the replacement part is (true) or is not (false) stocked locally. Null keeps the actual value.'),
+      risk_override: z
+        .number()
+        .min(0)
+        .max(1)
+        .nullable()
+        .describe('Scenario: failure risk score 0–1 to assume instead of the current one. Null keeps the actual value.'),
+    }),
+    execute: async ({ line_id, part_local_override, risk_override }) =>
+      mlflow.withSpan(
+        async () => {
+          const id = normalizeLineId(line_id);
+          const f = await getAtriskFeatures(ctx.db, id);
+          if (!f) return { found: false, note: `${id} is not an open at-risk line.` };
+          const scenario = {
+            risk_at_action: risk_override ?? f.failureRiskScore,
+            part_local: part_local_override ?? f.partLocal,
+            criticality: f.criticality,
+            machine_type: f.machineType,
+            part_lead_time_days: f.partLeadTimeDays,
+          };
+          const ranking = await scoreScenario(ctx.databricksHost, ctx.recommenderEndpoint, scenario);
+          return {
+            line_id: id,
+            scenario,
+            is_what_if: part_local_override !== null || risk_override !== null,
+            actual: { risk_at_action: f.failureRiskScore, part_local: f.partLocal },
+            recommended_action: ranking[0]?.action_type ?? null,
+            ranking,
+            model_endpoint: ctx.recommenderEndpoint,
+          };
+        },
+        {
+          name: 'predict_action_value',
+          spanType: mlflow.SpanType.TOOL,
+          inputs: { line_id, part_local_override, risk_override },
         },
       ),
   });
@@ -306,7 +371,7 @@ function makeTools(ctx: AgentContext): Tool[] {
       mlflow.withSpan(
         async () => {
           const { actionId } = await recordMaintenanceAction(ctx.db, {
-            lineId: line_id,
+            lineId: normalizeLineId(line_id),
             actionType: action_type,
             partId: part_id,
             draftedWo: drafted_work_order,
@@ -332,6 +397,7 @@ function makeTools(ctx: AgentContext): Tool[] {
   // Config-driven data-backend tool registration. Register ONLY when a backend
   // is configured (otherwise the tool would 404 confusingly).
   const tools: Tool[] = [findAtriskLine, rankMaintenanceActions, searchParts, executeMaintenanceAction];
+  if (ctx.recommenderEndpoint) tools.push(predictActionValue);
   if (ctx.masEndpointName) {
     tools.push(askData);
   } else if (ctx.genieSpaceId) {
@@ -551,6 +617,14 @@ rank_maintenance_actions(line_id) — THE ML RANKING TOOL. Read app.maintenance_
   expedite_parts_and_run). Quote all three in the draft; the agent picks which to
   recommend.
 
+predict_action_value(line_id, part_local_override?, risk_override?) — LIVE
+  WHAT-IF on the failure_recommender model's serving endpoint. Re-scores all
+  three actions for the line under a scenario (part stocked locally or not; a
+  different failure risk) and returns predicted avoided $, action cost $ and
+  net $ per option, best first. Use it whenever the user asks "what if…"
+  instead of doing the arithmetic yourself, and say it is a model scenario,
+  not the current batch recommendation.
+
 search_parts(query) — search the parts catalog via Lakebase Search over names +
   descriptions. Returns top matches with part_id, part_name, part_category,
   part_local, lead_time_days. Use when exploring parts or verifying availability.
@@ -593,11 +667,12 @@ run a three-phase chain with a confirmation step in the middle. The defining
 move: **you rank the recovery options by the ML model's predicted value**.
 
 **The story beat that lands the model**: The maintenance recommender model
-(trained on 5 years of plant logs) ranks pull_now / run_to_shift_end /
+(XGBoost, trained on 18 months of maintenance decisions + outcomes) ranks pull_now / run_to_shift_end /
 expedite_parts_and_run by net downtime cost avoided. For LINE-04's imminent
 failure (risk score 0.87), the model recommends *pull_now* because the part is
-non-local (14-day lead time), and delaying is more costly than stopping the line
-now. You don't call the model; you read the ranked options from app.maintenance_recommendations.
+non-local, and delaying is more costly than stopping the line now. Read the
+ranked options from app.maintenance_recommendations (rank_maintenance_actions);
+call the live model (predict_action_value) only for what-if scenarios.
 ALWAYS quote the full ranking (predicted $ for each option) so the user sees the
 model's logic before approving.
 

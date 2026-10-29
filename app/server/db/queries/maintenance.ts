@@ -42,6 +42,33 @@ export async function worstAtriskLine(
   return rows[0] ?? null;
 }
 
+/** The failure_recommender feature row for an at-risk line (app.open_atrisk). */
+export async function getAtriskFeatures(
+  db: AppDb,
+  lineId: string,
+): Promise<{
+  lineId: string;
+  failureRiskScore: number;
+  partLocal: boolean;
+  partLeadTimeDays: number | null;
+  machineType: string | null;
+  criticality: string | null;
+} | null> {
+  const rows = await db
+    .select({
+      lineId: openAtrisk.lineId,
+      failureRiskScore: openAtrisk.failureRiskScore,
+      partLocal: openAtrisk.partLocal,
+      partLeadTimeDays: openAtrisk.partLeadTimeDays,
+      machineType: openAtrisk.machineType,
+      criticality: openAtrisk.criticality,
+    })
+    .from(openAtrisk)
+    .where(eq(openAtrisk.lineId, lineId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** Line status (app.line_status) + parts context (app.open_atrisk) for a line. */
 export async function getLineStatus(
   db: AppDb,

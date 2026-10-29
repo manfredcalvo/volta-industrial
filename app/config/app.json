@@ -24,6 +24,10 @@
   "masEndpointName": "${MAS_ENDPOINT_NAME:}",
   "genieSpaceId":    "${GENIE_SPACE_ID:}",
 
+  // failure_recommender serving endpoint (ml/train_register.py + ml/score_serve.py). Powers
+  // the agent's predict_action_value what-if tool; empty → tool not registered.
+  "recommenderEndpoint": "${RECOMMENDER_ENDPOINT:}",
+
   // Agent LLM — routed through the Unity AI Gateway model service (M4), which
   // governs the call (spend cap, guardrails, inference logging) and forwards to
   // databricks-gpt-5-4. The value is the model service's UC name; the client

@@ -15,6 +15,7 @@ type ChatConfig = {
    * `genieSpaceId` if your demo uses Genie. */
   masEndpointName: string;
   genieSpaceId: string;
+  recommenderEndpoint: string;
   agentModel?: string;
 };
 
@@ -181,6 +182,7 @@ export async function handleChatStream(args: {
       userEmail,
       masEndpointName: config.masEndpointName,
       genieSpaceId: config.genieSpaceId,
+      recommenderEndpoint: config.recommenderEndpoint,
       databricksHost: host,
       // Foundation Model endpoint name. Needs the OpenAI Responses API
       // (plantfloor.ts `setOpenAIAPI('responses')`). `databricks-gpt-5-4` is the

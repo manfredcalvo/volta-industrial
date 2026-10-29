@@ -95,6 +95,8 @@ type AppConfig = {
    * The two are mutually-exclusive in the default template — if your
    * demo really needs both, edit makeTools() to register both factories. */
   genieSpaceId?: string;
+  /** failure_recommender serving endpoint for the predict_action_value tool. */
+  recommenderEndpoint?: string;
   /** Pinned MLflow experiment id, used by AppHeader's "Experiment" link.
    * Optional — most demos rely on `agentMlflowExperimentPath` below to
    * auto-create a per-app experiment instead of pinning a legacy one. */
@@ -176,6 +178,7 @@ const appConfigSchema = z
   .object({
     masEndpointName: z.string().optional(),
     genieSpaceId: z.string().optional(),
+    recommenderEndpoint: z.string().optional(),
     mlflowExperimentId: z.string().optional(),
     agentMlflowExperimentPath: z.string().optional(),
     agentModel: z.string().optional(),
@@ -488,6 +491,7 @@ await createApp({
     appConfig: {
       masEndpointName: appConfig.masEndpointName ?? '',
       genieSpaceId: appConfig.genieSpaceId ?? '',
+      recommenderEndpoint: appConfig.recommenderEndpoint ?? '',
       agentModel: appConfig.agentModel,
     },
   });

@@ -56,19 +56,22 @@ env:
   # export_resources exit JSON. This demo built the resources by hand, so
   # we pin them directly to the IDs recorded in resources.json.
   - name: DEMO_CATALOG
-    value: "serverless_stable_casaman_catalog"
+    value: "casaman_aws_stable_catalog"
   - name: DEMO_SCHEMA
     value: "dev_manffred_calvosanchez_volta_industrial"
   # Genie-only data backend: GENIE_SPACE_ID set, MAS_ENDPOINT_NAME empty
   # (plantfloor.ts makeTools registers askData against the Genie space).
   - name: GENIE_SPACE_ID
-    value: "01f1a5be270711da9b1c0609174bb1ef"
+    value: "01f1d3ebd22919d3ab58c599e15a50d9"
   - name: MAS_ENDPOINT_NAME
     value: ""
+  # failure_recommender MLflow model serving endpoint → predict_action_value tool.
+  - name: RECOMMENDER_ENDPOINT
+    value: "volta-failure-recommender"
   - name: DASHBOARD_ID
-    value: "01f1a5be658f193cafa4f33defbef793"
+    value: "01f1d3ebd32012e5a5c427923063403b"
   - name: PIPELINE_ID
-    value: "10878acd-b243-4cb7-bdf9-eb830cd9e701"
+    value: "c0613336-1b7a-4f70-96b4-e79f13c39e6b"
   - name: LAKEBASE_PROJECT_ID
     value: "volta-plant-floor"
   # Empty → the app self-derives /Shared/solution_builder/<app_name>-agent-traces
