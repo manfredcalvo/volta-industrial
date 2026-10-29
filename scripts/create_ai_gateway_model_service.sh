@@ -8,14 +8,17 @@
 # No proxy token/secret is needed: a model service routes DIRECTLY to the
 # system.ai foundation model via a pay-per-token destination.
 #
-# Usage: ./scripts/create_ai_gateway_model_service.sh [--profile <p>]
+# Usage: CATALOG=<cat> APP_SP=<app-sp-client-id> ./scripts/create_ai_gateway_model_service.sh [--profile <p>]
 set -euo pipefail
 
-PROFILE="${DATABRICKS_CONFIG_PROFILE:-vending-aws-casaman}"
+PROFILE="${DATABRICKS_CONFIG_PROFILE:-fevm-casaman-aws-stable}"
 [ "${1:-}" = "--profile" ] && PROFILE="$2"
-DBX() { DATABRICKS_AUTH_STORAGE=plaintext databricks "$@" --profile "$PROFILE"; }
+DBX() { databricks "$@" --profile "$PROFILE"; }
 
-PARENT="schemas/serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial"
+CATALOG="${CATALOG:-casaman_aws_stable_catalog}"
+SCHEMA="${SCHEMA:-dev_manffred_calvosanchez_volta_industrial}"
+FQ="$CATALOG.$SCHEMA"
+PARENT="schemas/$FQ"
 SERVICE_ID="volta_ai_gateway"
 MODEL="models/system.ai.databricks-gpt-5-4"
 
@@ -37,7 +40,7 @@ DBX ai-gateway create-model-service "$PARENT" "$SERVICE_ID" \
     }
   }'
 
-NAME="model-services/serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.$SERVICE_ID"
+NAME="model-services/$FQ.$SERVICE_ID"
 
 # ── Inference logging: payloads → a governed UC Delta table ─────────────────
 echo "[gw] enabling inference table (payload logging)"
@@ -73,9 +76,13 @@ DBX ai-gateway update-model-service "$NAME" config.rate_limits --json '{
 # `block-bulk-data-exfiltration` (input policy). See gateway_service_README for
 # the policy prompt. Verified: an all-data request is blocked, scoped queries pass.
 
-echo "[gw] grant the app service principal EXECUTE on the model service"
-DBX grants update model_service "serverless_stable_casaman_catalog.dev_manffred_calvosanchez_volta_industrial.$SERVICE_ID" \
-  --json '{"changes":[{"principal":"e951229d-5569-44e0-a6ba-04da12135ecd","add":["EXECUTE"]}]}'
+if [ -n "${APP_SP:-}" ]; then
+  echo "[gw] grant the app service principal EXECUTE on the model service"
+  DBX grants update model_service "$FQ.$SERVICE_ID" \
+    --json '{"changes":[{"principal":"'"$APP_SP"'","add":["EXECUTE"]}]}'
+else
+  echo "[gw] APP_SP unset — re-run with APP_SP=<client-id> after the app exists to grant EXECUTE"
+fi
 
 echo "[gw] final config:"
 DBX ai-gateway get-model-service "$NAME" -o json

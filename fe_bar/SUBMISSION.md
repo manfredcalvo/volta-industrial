@@ -1,0 +1,110 @@
+# Volta Industrial — Downtime & Maintenance Rescue (FE Bar submission)
+
+**Industry:** discrete manufacturing (heavy industrial equipment, 8 plants, ~1,200 connected lines).
+**Customer problem:** a high-utilization run wore ~90 production lines toward failure. The nightly
+report flags the risk *after* the shift, when an unplanned stop already costs **~$22K/hour**. The VP of
+Manufacturing Ops (Sam Ortiz) has to decide, line by line, whether to **pull it now** for planned
+maintenance, **run to shift end**, or **expedite the part and keep running**. Today that's a gut call.
+**Exposure:** $3.52M downtime-at-risk, 90 critical lines, 160 open work orders (`mv_line_risk`).
+
+## The data journey (one integrated path, all on synthetic data)
+
+```
+raw parquet (Volume) ─▶ Lakeflow SDP: silver_* → gold_*  (read_files, MVs, ai_classify, ai_query embeddings)
+                          │  Unity Catalog: one schema, metric view mv_line_risk, SP grants, lineage
+                          ├─▶ gold_maintenance_outcomes (35K decisions) ─▶ MLflow failure_recommender
+                          │      train_register → UC @prod → score_serve ─▶ gold_maintenance_recommendations
+                          │                                └─▶ serving endpoint (+AI Gateway) ◀─ app what-if tool
+                          ├─▶ Genie Agent "Volta Plant Floor" over gold + metric view (NL → SQL)
+                          └─▶ Lakebase (synced tables, scale-to-zero) ─▶ Databricks App (AppKit + agent)
+                                                       app agent LLM ─▶ Unity AI Gateway model service
+                                                       approved work order ─▶ Lakebase write-back
+```
+
+Orchestration: job `volta_ml_refresh` = `refresh_pipeline` → `train_register` → `score_serve`.
+Bundle-managed (`build/databricks.yml`); Genie, dashboard and gateway are scripted.
+
+## What I built on top of the AI Customer Challenge template
+
+The template shipped a data generator, specs, a minimal bundle, and an app shell with stubbed tools.
+It said "use the heuristic, ML optional". On top of that:
+
+1. **Lakeflow pipeline (mine):** 10 SDP materialized views, raw → silver → gold, including an
+   `ai_classify` note-risk signal and `ai_query` part embeddings. `gold_line_status` is the
+   one-row-per-line spine.
+2. **ML model replacing the heuristic (new for FE Bar):** `failure_recommender`, two XGBoost heads
+   (cost avoided, action cost) tuned with Optuna. MLflow tracks the runs, and both heads plus a
+   business rule are packaged as one pyfunc registered in UC as `@prod`. It batch-scores
+   `gold_maintenance_recommendations` (the same contract the heuristic had, plus `model_version`)
+   and is served on `volta-failure-recommender`, with AI Gateway usage tracking, an inference
+   table and a per-user rate limit. The heuristic is kept as `gold_recommendations_heuristic`, as
+   an auditable baseline.
+3. **Genie Agent (mine):** a real Genie space over the governed gold tables and metric view, with
+   instructions that map "LINE-04" to `LINE-0004` and explain that recommendations are ML-scored.
+4. **New agent tool through governed serving (new for FE Bar):** `predict_action_value` lets the app's
+   agent run live what-ifs against the served model ("what if the part were local?"). The agent's
+   own LLM calls go through the Unity AI Gateway model service `volta_ai_gateway` (rate limits as
+   the spend cap, plus an inference table).
+5. **Lakebase + app action layer (mine):** synced tables, the app's investigate → rank → draft →
+   approve → write-back arc, and approvals written to `app.work_orders_app`.
+
+## Key decisions and trade-offs
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Predict **expected $** (regression) per (situation, action), then rank by net | The business question is "which play is worth the most", not "will it fail". Net value is what Sam approves | Needs a cost estimate too, hence a second head |
+| **Exclude `downtime_hours` and realized cost** from features, although the spec listed them | They are known only *after* the action, so using them is leakage. Features are what Sam knows before deciding | A lower R² on paper |
+| Judge the avoided-cost head by **calibration**, not R² | The label is 0 or the full stop cost (a stochastic event), so per-row R² is noise-capped. Mean predicted vs actual per action × risk bucket is the real check | Harder to explain than one number, so I report both |
+| **Explicit lead-time rule** in the pyfunc (non-local expedite: 50% feasibility, +$1.5K freight per lead-time day) | The history has no lead-time signal, and in it a non-local expedite looks as good as a local one. That's the one thing the model can't learn | A business assumption, versioned with the model and logged as params. Next step: capture lead time in maintenance events |
+| **One artifact, two consumers** (batch table + endpoint) | The app, Genie and dashboard read the table; what-ifs hit the endpoint. Same version, so they can't disagree (asserted in `score_serve`) | Endpoint cost, mitigated by scale-to-zero |
+| Batch-score with the loaded model, not `ai_query` through the endpoint | 155 lines × 3 actions is tiny; no dependency on the endpoint being warm | Two code paths to keep identical (same pyfunc, so low risk) |
+| Split train vs score/serve tasks | Re-score or re-serve without retraining; each step is reviewable | Version is passed via the `@prod` alias |
+| App calls run as the **app service principal**, not OBO | Per-user OBO scope consent caused 403s on model serving and Genie | The user is still attributed via MLflow traces and the write-back audit |
+| Lakebase **SNAPSHOT** synced tables | Gold tables are MVs (no CDF); a few thousand rows | Not real-time; refreshes on job cadence |
+
+## Results (from `evidence/ml_model_evidence.md`)
+
+- Avoided-cost head: holdout RMSE **$22.0K**, **18.6% better** than the per-action historical mean.
+  R² is 0.50, the expected ceiling for a 0-or-full-stop label. Calibration is what matters: the
+  mean predicted vs actual avoided $ is within **1.5–12%** in every pull/expedite risk bucket
+  (UC version 3, `@prod`). The cost head reaches **R² 0.991**.
+- 155 at-risk lines scored: **126 pull_now / 29 expedite_parts_and_run / 0 run_to_shift_end**.
+  Running to shift end never wins on these lines: the gamble's expected loss beats its savings at
+  these risk levels.
+- **Hero LINE-0004** (risk 0.87, non-local part): **pull_now, net +$50.5K**, vs expedite +$12.3K and
+  run −$79.1K. Live what-if: with a local part, expedite climbs to **+$34.8K** but still loses to
+  pull_now. The model reproduces the `part_local` lever instead of having it hardcoded.
+- **65.8% agreement** with the old heuristic. All 53 disagreements are high-risk lines (avg 0.80)
+  with a *local* part, where the heuristic said expedite and the model says pull_now. The cause is the
+  cost of a planned pull: the heuristic hardcoded **$40K**, but the history shows **~$15K** (planned
+  stops are short and run at ~30% of the unplanned hourly cost). This is the clearest case of the
+  model correcting a hand-picked assumption with data.
+
+## Business value
+
+One avoided unplanned stop on a line like LINE-0004 is worth ~$50K net. The model turns 155
+judgment calls into a ranked, auditable queue, with the reason ($ avoided vs $ cost) attached. Sam
+approves in one click and the work order writes back. The AI spend is predictable: the agent LLM sits
+behind gateway rate limits, the model endpoint has its own per-user limit and scales to zero, and
+every call is logged to inference tables.
+
+## Known limitations (and what I'd do next)
+
+- **Exposure vs avoided units:** the exposure KPI assumes ~2 expected unplanned hours and counts only
+  lines with risk ≥ 0.6. The outcome history values an avoided stop at ~4 hours across all 155
+  at-risk lines. That's why total predicted avoided ($7.07M) exceeds the $3.52M exposure. The old
+  heuristic had the same gap ($7.73M). Next step: reconcile both to the plant's real MTTR.
+- The lead-time rule is an assumption (see above). Data is synthetic, so real accuracy is unproven.
+- Scale-to-zero: the first what-if after idle can take minutes (disable on demo days).
+- App MLflow trace spans are blocked by workspace egress (trace metadata still lands).
+
+## Evidence (text-readable, exported from the live workspace)
+
+| File | Shows |
+|---|---|
+| `evidence/platform_run_evidence.md` | Pipeline COMPLETED + table row counts, metric view KPIs, SP grants, synced tables ONLINE, gateway, app RUNNING |
+| `evidence/ml_model_evidence.md` | MLflow metrics + params, calibration, ML vs heuristic, UC `@prod`, endpoint + AI Gateway, smoke test, scored mix |
+| `evidence/genie_qa.md` | 5 natural-language questions → Genie's SQL → result rows |
+| `evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
+
+Source copies in `build/`; full repo: github.com/manfredcalvo/volta-industrial.
