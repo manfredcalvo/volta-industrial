@@ -4,7 +4,7 @@
 # MAGIC
 # MAGIC Replaces the template's heuristic. Two XGBoost heads predict **avoided** $ and **cost** $ for a
 # MAGIC (line situation, action); **net = avoided − cost** ranks the plays. `score_serve.py` serves it.
-# MAGIC Decisions (rationale in `fe_bar/SUBMISSION.md`): **no leakage** (pre-decision features only);
+# MAGIC Decisions (rationale in `BUILD.md`): **no leakage** (pre-decision features only);
 # MAGIC **judged by calibration** (the label is a stochastic 0-or-full-stop outcome); an explicit, versioned
 # MAGIC **lead-time rule** for non-local expedites, which the history can't teach.
 

@@ -2,7 +2,7 @@
 
 The evaluator reads at most 30 files, 9,000 chars each, 90,000 chars in total. The code itself is
 read from its real location in the repo (transformation/, ml/, app/, scripts/), so fe_bar/ holds
-only SUBMISSION.md, BUILD_NOTES.md and the exported evidence. Fails if any limit is exceeded.
+only the exported evidence (the narrative is the root BUILD.md, which the scorer always reads). Fails if any limit is exceeded.
 
 Usage: python scripts/build_fe_bar_folder.py
 """

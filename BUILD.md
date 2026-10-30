@@ -1,4 +1,4 @@
-# Volta Industrial — Downtime & Maintenance Rescue (FE Bar submission)
+# Volta Industrial — Downtime & Maintenance Rescue (FE Bar build)
 
 **Industry:** discrete manufacturing (heavy industrial equipment, 8 plants, ~1,200 connected lines).
 **Customer problem:** a high-utilization run wore ~90 production lines toward failure. The nightly
@@ -52,13 +52,69 @@ It said "use the heuristic, ML optional". On top of that:
 5. **Lakebase + app action layer (mine):** synced tables, the app's investigate → rank → draft →
    approve → write-back arc, and approvals written to `app.work_orders_app`.
 
+## Authorship
+
+The challenge template (import commit `dcd88c2`) shipped a data generator, specs, a minimal bundle, an
+app shell with stubbed tools, and only a README in `transformation/`. Everything below was built in my
+own commits (author `manffred-calvosanchez_data`, `manffred.calvosanchez@databricks.com`):
+
+| Component | Commits | Lines |
+|---|---|---|
+| Lakeflow pipeline (`transformation/*.sql`) | `f1b6c85`, `119f3de`, `e9a50e6` | 332 |
+| ML model (`ml/`) | `e9a50e6` | 362 |
+| Genie agent (`genie_space.json` + deploy/evidence scripts) | `1323dd2`, `e9a50e6`, `443737c` | 149 |
+| Agent what-if tool (`app/server/agent/tools/recommender.ts`) | `85b79e6` | 66 |
+
+Per-commit detail, generated from `git log` and the GitHub API: `fe_bar/evidence/authorship.md`.
+
 ## Key decisions and trade-offs
 
-Leakage-free features, calibration over R², an explicit lead-time rule, one model version for batch
-and live, SP auth. Full table and the AI-assistant workflow (what it got wrong, how it was caught):
-**`BUILD_NOTES.md`**.
+| Decision | Why | Trade-off |
+|---|---|---|
+| Predict **expected $** per (situation, action), rank by net value | The question is "which play is worth the most", not "will it fail". Net value is what Sam approves | Needs a cost estimate too, hence a second head |
+| **Exclude `downtime_hours` and realized cost** from features, although the spec listed them | Known only *after* the action, so using them is leakage | A lower R² on paper |
+| Judge the avoided-cost head by **calibration**, not R² | The label is 0 or the full stop cost, so per-row R² is noise-capped; mean predicted vs actual per action × risk bucket is the real check | Harder to explain, so I report both |
+| **Explicit lead-time rule** in the pyfunc (non-local expedite: 50% feasibility, +$1.5K/lead-day) | The history has no lead-time signal; a non-local expedite looks as good as a local one | A versioned assumption (logged as MLflow params). Next: capture lead time |
+| **One artifact, two consumers** (batch table + endpoint) | Same version, so the queue and the what-if can't disagree (asserted in `score_serve`) | Endpoint cost, mitigated by scale-to-zero |
+| Batch-score with the loaded model, not `ai_query` | 155 × 3 rows; no dependency on a warm endpoint | Two code paths, but the same pyfunc |
+| Split `train_register` / `score_serve` tasks | Re-score or re-serve without retraining; each step is reviewable | Version handed over via `@prod` |
+| App calls as the **app service principal**, not OBO | Per-user OBO scope consent caused 403s on model serving and Genie | User attribution kept via traces + write-back audit |
+| Lakebase **SNAPSHOT** synced tables | Gold tables are MVs; a few thousand rows | Not real-time; refreshes on job cadence |
 
-## Results (from `evidence/ml_model_evidence.md`)
+## How I used the AI coding assistant
+
+I built this with Claude Code driving the Databricks CLI, bundles and SDK. I set the scope (replace the
+heuristic with a served model, add one governed agent tool, target workspace) and gave it the FE Bar
+FAQ as the acceptance criteria. Every claim had to come back as a query result, a run output or a
+committed export, not a description.
+
+**Where it went wrong, and how it was caught:**
+
+1. **A wrong explanation.** It first described the model-vs-rule disagreements as "moderate-risk lines".
+   A crosstab query showed all 53 were high-risk lines with a *local* part. The real cause was the
+   rule's flat $40K planned-pull cost vs ~$15K in the history. Narrative corrected before committing.
+2. **Leakage in the spec.** The challenge spec listed `downtime_hours` and `action_cost_usd` as
+   features. Both are post-decision outcomes, so they were excluded, at the cost of a lower R².
+3. **A bug only a live test found.** The first real agent turn asked about "LINE-04" and every tool
+   returned nothing, because ids are `LINE-0004`. Typecheck and unit-level checks had passed. Fixed
+   with a normalizer in every line-keyed tool, then re-verified with a live turn.
+4. **Misleading evidence.** The first calibration export showed a 94,200% "gap" for run-to-shift-end,
+   whose actual mean is $0. Switched that column to a $ gap rather than ship a confusing number.
+5. **Numbers that don't add up.** Total predicted avoided ($7.07M) exceeds exposure ($3.52M). Traced to
+   the data (2-hour vs 4-hour stop assumptions), not the model; documented as a limitation and kept
+   out of the payback math.
+6. **Evaluator limits.** The single notebook was 17K characters, so the serving half would be cut off.
+   Split into two job tasks; `scripts/build_fe_bar_folder.py` fails the build if any file or the folder
+   exceeds the budget.
+7. **Earlier phase:** a delegated sub-agent once returned a confident status report with zero tool
+   calls. I stopped trusting summaries and verified file diffs and run outputs directly.
+
+**How output was checked:** `score_serve` asserts the hero ranks pull_now, the action mix isn't
+collapsed, and the live endpoint ranks identically to the batch table; `tsc` typecheck and
+`bundle validate` before every deploy; and every figure in the deck and here is regenerated by an
+export script in `scripts/` from the live workspace.
+
+## Results (from `fe_bar/evidence/ml_model_evidence.md`)
 
 - Avoided-cost head: holdout RMSE **$22.0K**, **18.6% better** than the per-action historical mean.
   R² is 0.50, the expected ceiling for a 0-or-full-stop label. Calibration is what matters: the
@@ -76,7 +132,7 @@ and live, SP auth. Full table and the AI-assistant workflow (what it got wrong, 
 
 ## Business case for the funding executive (Plant GM / CFO)
 
-From `evidence/business_case.md` (governed gold tables, one wear cycle = the current at-risk cohort):
+From `fe_bar/evidence/business_case.md` (governed gold tables, one wear cycle = the current at-risk cohort):
 
 | Per wear cycle | PLANT-03 pilot | Fleet (8 plants) |
 |---|---|---|
@@ -118,11 +174,11 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
 
 | File | Shows |
 |---|---|
-| `evidence/platform_run_evidence.md` | Pipeline COMPLETED + table row counts, metric view KPIs, SP grants, synced tables ONLINE, gateway, app RUNNING |
-| `evidence/ml_model_evidence.md` | MLflow metrics + params, calibration, ML vs heuristic, UC `@prod`, endpoint + AI Gateway, smoke test, scored mix |
-| `evidence/genie_qa.md` | 5 natural-language questions → Genie's SQL → result rows |
-| `evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
-| `evidence/authorship.md` | Template import vs my commits per component (pipeline, ML, Genie, agent tool), with GitHub logins |
-| `evidence/business_case.md` | Per-plant and fleet value (ML vs old rule vs status quo) + the SQL behind it |
+| `fe_bar/evidence/platform_run_evidence.md` | Pipeline COMPLETED + table row counts, metric view KPIs, SP grants, synced tables ONLINE, gateway, app RUNNING |
+| `fe_bar/evidence/ml_model_evidence.md` | MLflow metrics + params, calibration, ML vs heuristic, UC `@prod`, endpoint + AI Gateway, smoke test, scored mix |
+| `fe_bar/evidence/genie_qa.md` | 5 natural-language questions → Genie's SQL → result rows |
+| `fe_bar/evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
+| `fe_bar/evidence/authorship.md` | Template import vs my commits per component (pipeline, ML, Genie, agent tool), with GitHub logins |
+| `fe_bar/evidence/business_case.md` | Per-plant and fleet value (ML vs old rule vs status quo) + the SQL behind it |
 
 Code: `transformation/` (pipeline), `ml/` (model), `app/` (app + agent tools), `scripts/`, `databricks.yml`.
