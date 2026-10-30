@@ -53,10 +53,9 @@ It said "use the heuristic, ML optional". On top of that:
 
 ## Key decisions and trade-offs
 
-Full table with the reasoning and the cost of each choice: **`BUILD_NOTES.md`**. In short: predict
-expected $ and rank by net value; exclude post-action features (leakage); judge by calibration, not R²;
-an explicit, versioned lead-time rule the history can't teach; one model version serving both the batch
-table and live what-ifs; app calls as the service principal rather than OBO.
+Leakage-free features, calibration over R², an explicit lead-time rule, one model version for batch
+and live, SP auth. Full table and the AI-assistant workflow (what it got wrong, how it was caught):
+**`BUILD_NOTES.md`**.
 
 ## Results (from `evidence/ml_model_evidence.md`)
 
@@ -65,16 +64,14 @@ table and live what-ifs; app calls as the service principal rather than OBO.
   mean predicted vs actual avoided $ is within **1.5–12%** in every pull/expedite risk bucket
   (UC version 3, `@prod`). The cost head reaches **R² 0.991**.
 - 155 at-risk lines scored: **126 pull_now / 29 expedite_parts_and_run / 0 run_to_shift_end**.
-  Running to shift end never wins on these lines: the gamble's expected loss beats its savings at
-  these risk levels.
+  Running to shift end never wins at these risk levels.
 - **Hero LINE-0004** (risk 0.87, non-local part): **pull_now, net +$50.5K**, vs expedite +$12.3K and
   run −$79.1K. Live what-if: with a local part, expedite climbs to **+$34.8K** but still loses to
   pull_now. The model reproduces the `part_local` lever instead of having it hardcoded.
 - **65.8% agreement** with the old heuristic. All 53 disagreements are high-risk lines (avg 0.80)
   with a *local* part, where the heuristic said expedite and the model says pull_now. The cause is the
-  cost of a planned pull: the heuristic hardcoded **$40K**, but the history shows **~$15K** (planned
-  stops are short and run at ~30% of the unplanned hourly cost). This is the clearest case of the
-  model correcting a hand-picked assumption with data.
+  cost of a planned pull: the heuristic hardcoded **$40K**, but the history shows **~$15K**: the model
+  corrected a hand-picked assumption with data.
 
 ## Business case for the funding executive (Plant GM / CFO)
 
@@ -97,6 +94,18 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
 - The $25K is an estimate (serverless compute, model serving, Lakebase, LLM tokens, integration
   effort). Confirm it with Databricks sizing, then from `system.billing.usage` after week 1.
 
+## Why it matters beyond the plant floor
+
+- **Volta's customers:** heavy-equipment buyers plan around delivery dates. An unplanned stop on a
+  constrained line slips ship dates, which means late-delivery penalties and re-orders going to a
+  competitor. Delivery reliability and uptime commitments are what win the next contract.
+- **OEE and margin:** unplanned downtime hits OEE availability directly. A planned pull turns it into
+  scheduled time, and avoids the overtime, expedite freight and "just in case" spares that erode
+  plant margin.
+- **Capital:** steadier lines defer buying spare capacity to cover for unreliable ones.
+- The pilot therefore also tracks **OEE availability** at PLANT-03 and the **on-time ship rate** of
+  orders sourced from its lines.
+
 ## Known limitations (and what I'd do next)
 
 - **Exposure vs avoided units:** the exposure KPI assumes ~2 expected unplanned hours and counts only
@@ -104,8 +113,7 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
   at-risk lines. That's why total predicted avoided ($7.07M) exceeds the $3.52M exposure. The old
   heuristic had the same gap ($7.73M). Next step: reconcile both to the plant's real MTTR.
 - The lead-time rule is an assumption (see above). Data is synthetic, so real accuracy is unproven.
-- Scale-to-zero: the first what-if after idle can take minutes (disable on demo days).
-- App MLflow trace spans are blocked by workspace egress (trace metadata still lands).
+- Scale-to-zero makes the first what-if after idle slow; app trace spans are blocked by egress.
 
 ## Evidence (text-readable, exported from the live workspace)
 
@@ -115,6 +123,7 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
 | `evidence/ml_model_evidence.md` | MLflow metrics + params, calibration, ML vs heuristic, UC `@prod`, endpoint + AI Gateway, smoke test, scored mix |
 | `evidence/genie_qa.md` | 5 natural-language questions → Genie's SQL → result rows |
 | `evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
+| `evidence/authorship.md` | Template import vs my commits per component (pipeline, ML, Genie, agent tool), with GitHub logins |
 | `evidence/business_case.md` | Per-plant and fleet value (ML vs old rule vs status quo) + the SQL behind it |
 
 Code: `transformation/` (pipeline), `ml/` (model), `app/` (app + agent tools), `scripts/`, `databricks.yml`.

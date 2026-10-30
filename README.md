@@ -16,6 +16,7 @@ are in [`specifications/WORKSHOP_README.md`](specifications/WORKSHOP_README.md).
 | [`fe_bar/SUBMISSION.md`](fe_bar/SUBMISSION.md) | Problem, both audiences (VP Mfg Ops and the funding Plant GM/CFO), the data journey, what I built on top, results, business case, limitations |
 | [`fe_bar/BUILD_NOTES.md`](fe_bar/BUILD_NOTES.md) | Design decisions and trade-offs; how the AI coding assistant was steered and checked |
 | [`fe_bar/evidence/`](fe_bar/evidence/) | Run evidence exported from the live workspace: platform run, ML model, Genie Q&A, agent what-if, business case |
+| [`fe_bar/evidence/authorship.md`](fe_bar/evidence/authorship.md) | What the challenge template contained vs. the commits I made for the pipeline, ML model, Genie agent and agent tool |
 | [`deck/volta_fe_bar_deck.pdf`](deck/volta_fe_bar_deck.pdf) | The customer presentation |
 
 ## The build
