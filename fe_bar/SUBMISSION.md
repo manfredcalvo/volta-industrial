@@ -25,7 +25,7 @@ raw parquet (Volume) ─▶ Lakeflow SDP: silver_* → gold_*  (read_files, MVs,
 ```
 
 Orchestration: job `volta_ml_refresh` = `refresh_pipeline` → `train_register` → `score_serve`.
-Bundle-managed (`build/databricks.yml`); Genie, dashboard and gateway are scripted.
+Bundle-managed (`databricks.yml`); Genie, dashboard and gateway are scripted (`scripts/`).
 
 ## What I built on top of the AI Customer Challenge template
 
@@ -117,4 +117,4 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
 | `evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
 | `evidence/business_case.md` | Per-plant and fleet value (ML vs old rule vs status quo) + the SQL behind it |
 
-Source copies in `build/`; full repo: github.com/manfredcalvo/volta-industrial.
+Code: `transformation/` (pipeline), `ml/` (model), `app/` (app + agent tools), `scripts/`, `databricks.yml`.

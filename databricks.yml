@@ -1,20 +1,17 @@
-# Databricks Asset Bundle — Workshop: Volta Industrial (Downtime & Maintenance Rescue).
+# Declarative Automation Bundle — Volta Industrial: Downtime & Maintenance Rescue.
 #
-# WORKSHOP TEMPLATE — this bundle does the MINIMUM so a trainee can start the
-# AI Customer Challenge: it stands up the schema + a raw-data Volume and a job
-# that generates the synthetic dataset. It deliberately does NOT build the
-# pipeline, metric view, model, dashboard, Lakebase, or the app — those are the
-# graded milestones the trainee builds (see README.md → "What YOU need to
-# create" and app/APP_WORKSHOP.md).
+# Deploys the whole solution: schema + raw_data Volume, the data-generation job, the Lakeflow SDP
+# pipeline (transformation/), the ML refresh job (refresh_pipeline → ml/train_register.py →
+# ml/score_serve.py, which also rolls the volta-failure-recommender serving endpoint), the Lakebase
+# project + synced tables, and the AppKit app (app/). The Genie space, metric view, dashboard and
+# AI Gateway model service are scripted (scripts/deploy_semantic_layer.py,
+# scripts/create_ai_gateway_model_service.sh). See README.md for the run order.
 #
-#   1. `databricks bundle deploy`             → schema + raw_data volume + setup job
-#   2. `databricks bundle run volta_setup`    → generates the synthetic raw data
-#   Then follow README.md: build Milestone 1 (Data) → 2 (Lakebase) → 3 (App) → 4 (AI Gateway),
-#   using Genie Code against the specs in specifications/.
-#
-# The README + specifications/ + data_generation/ + app/ come with the forked
-# template folder; this bundle only provisions the workspace resources needed to
-# get data flowing. Deploy is documented in README.md — do NOT run it as part of authoring.
+#   databricks bundle deploy -t casaman --profile <profile>
+#   databricks bundle run volta_setup -t casaman        # synthetic raw data
+#   databricks bundle run volta_ml_refresh -t casaman   # pipeline → train → score → serve
+#   databricks bundle deploy -t casaman                 # 2nd pass: synced tables + app
+#   databricks bundle run volta_app -t casaman
 bundle:
   name: workshop-volta-industrial
 
