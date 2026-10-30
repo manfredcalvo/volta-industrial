@@ -7,8 +7,9 @@ Manufacturing Ops (Sam Ortiz) has to decide, line by line, whether to **pull it 
 maintenance, **run to shift end**, or **expedite the part and keep running**. Today that's a gut call.
 **Exposure:** $3.52M downtime-at-risk, 90 critical lines, 160 open work orders (`mv_line_risk`).
 **Two people have to say yes:** Sam runs the floor and asks *which play, for which line, now?* The
-**Plant GM / CFO** funds the change and asks *what does it cost, and when does it pay back?* The build
-answers both; the business case for the funder is below.
+**Plant GM / CFO** funds the change and asks *what does it cost, and when does it pay back?* The Plant GM
+is measured on the plant's OEE target, on-time delivery and contribution margin; the CFO on operating
+margin, capex and spares inventory. Every number below maps to one of those.
 
 ## The data journey (one integrated path, all on synthetic data)
 
@@ -91,8 +92,7 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
   4-hour stop length, so it is shown as an upper bound and not used for payback.
 - **The ask:** a capped 30-day PLANT-03 pilot (Budgets + AI Gateway limits), go/no-go at
   downtime $ avoided ≥ 3× spend, then fund the rollout per plant from the measured payback.
-- The $25K is an estimate (serverless compute, model serving, Lakebase, LLM tokens, integration
-  effort). Confirm it with Databricks sizing, then from `system.billing.usage` after week 1.
+- The $25K is my estimate; confirm with Databricks sizing, then `system.billing.usage` in week 1.
 
 ## Why it matters beyond the plant floor
 
@@ -100,9 +100,8 @@ From `evidence/business_case.md` (governed gold tables, one wear cycle = the cur
   constrained line slips ship dates, which means late-delivery penalties and re-orders going to a
   competitor. Delivery reliability and uptime commitments are what win the next contract.
 - **OEE and margin:** unplanned downtime hits OEE availability directly. A planned pull turns it into
-  scheduled time, and avoids the overtime, expedite freight and "just in case" spares that erode
-  plant margin.
-- **Capital:** steadier lines defer buying spare capacity to cover for unreliable ones.
+  scheduled time; less overtime and expedite freight protect the GM's contribution margin.
+- **Capital:** steadier lines defer spare capacity (the CFO's capex) and "just in case" spares.
 - The pilot therefore also tracks **OEE availability** at PLANT-03 and the **on-time ship rate** of
   orders sourced from its lines.
 
