@@ -6,6 +6,9 @@ report flags the risk *after* the shift, when an unplanned stop already costs **
 Manufacturing Ops (Sam Ortiz) has to decide, line by line, whether to **pull it now** for planned
 maintenance, **run to shift end**, or **expedite the part and keep running**. Today that's a gut call.
 **Exposure:** $3.52M downtime-at-risk, 90 critical lines, 160 open work orders (`mv_line_risk`).
+**Two people have to say yes:** Sam runs the floor and asks *which play, for which line, now?* The
+**Plant GM / CFO** funds the change and asks *what does it cost, and when does it pay back?* The build
+answers both; the business case for the funder is below.
 
 ## The data journey (one integrated path, all on synthetic data)
 
@@ -50,17 +53,10 @@ It said "use the heuristic, ML optional". On top of that:
 
 ## Key decisions and trade-offs
 
-| Decision | Why | Trade-off |
-|---|---|---|
-| Predict **expected $** (regression) per (situation, action), then rank by net | The business question is "which play is worth the most", not "will it fail". Net value is what Sam approves | Needs a cost estimate too, hence a second head |
-| **Exclude `downtime_hours` and realized cost** from features, although the spec listed them | They are known only *after* the action, so using them is leakage. Features are what Sam knows before deciding | A lower R² on paper |
-| Judge the avoided-cost head by **calibration**, not R² | The label is 0 or the full stop cost (a stochastic event), so per-row R² is noise-capped. Mean predicted vs actual per action × risk bucket is the real check | Harder to explain than one number, so I report both |
-| **Explicit lead-time rule** in the pyfunc (non-local expedite: 50% feasibility, +$1.5K freight per lead-time day) | The history has no lead-time signal, and in it a non-local expedite looks as good as a local one. That's the one thing the model can't learn | A business assumption, versioned with the model and logged as params. Next step: capture lead time in maintenance events |
-| **One artifact, two consumers** (batch table + endpoint) | The app, Genie and dashboard read the table; what-ifs hit the endpoint. Same version, so they can't disagree (asserted in `score_serve`) | Endpoint cost, mitigated by scale-to-zero |
-| Batch-score with the loaded model, not `ai_query` through the endpoint | 155 lines × 3 actions is tiny; no dependency on the endpoint being warm | Two code paths to keep identical (same pyfunc, so low risk) |
-| Split train vs score/serve tasks | Re-score or re-serve without retraining; each step is reviewable | Version is passed via the `@prod` alias |
-| App calls run as the **app service principal**, not OBO | Per-user OBO scope consent caused 403s on model serving and Genie | The user is still attributed via MLflow traces and the write-back audit |
-| Lakebase **SNAPSHOT** synced tables | Gold tables are MVs (no CDF); a few thousand rows | Not real-time; refreshes on job cadence |
+Full table with the reasoning and the cost of each choice: **`BUILD_NOTES.md`**. In short: predict
+expected $ and rank by net value; exclude post-action features (leakage); judge by calibration, not R²;
+an explicit, versioned lead-time rule the history can't teach; one model version serving both the batch
+table and live what-ifs; app calls as the service principal rather than OBO.
 
 ## Results (from `evidence/ml_model_evidence.md`)
 
@@ -80,13 +76,26 @@ It said "use the heuristic, ML optional". On top of that:
   stops are short and run at ~30% of the unplanned hourly cost). This is the clearest case of the
   model correcting a hand-picked assumption with data.
 
-## Business value
+## Business case for the funding executive (Plant GM / CFO)
 
-One avoided unplanned stop on a line like LINE-0004 is worth ~$50K net. The model turns 155
-judgment calls into a ranked, auditable queue, with the reason ($ avoided vs $ cost) attached. Sam
-approves in one click and the work order writes back. The AI spend is predictable: the agent LLM sits
-behind gateway rate limits, the model endpoint has its own per-user limit and scales to zero, and
-every call is logged to inference tables.
+From `evidence/business_case.md` (governed gold tables, one wear cycle = the current at-risk cohort):
+
+| Per wear cycle | PLANT-03 pilot | Fleet (8 plants) |
+|---|---|---|
+| Downtime exposure at stake | $493K | $3.52M |
+| Lines with a model-ranked play | 22 | 155 |
+| Value of the model over today's rule | $38K | $587K (~$73K per plant) |
+| Pilot investment (my estimate) | ~$25K | sized from pilot billing |
+
+- **Payback:** at $22K/hour, the ~$25K pilot breaks even after **~1.1 hours of avoided unplanned
+  downtime**. One avoided 4-hour stop ($88K) returns **3.5×** the pilot. The model's improvement over
+  today's rule alone ($38K at PLANT-03) covers it within the first wear cycle.
+- **Conservative by design:** the model-vs-status-quo number ($2.1M at PLANT-03) uses the history's
+  4-hour stop length, so it is shown as an upper bound and not used for payback.
+- **The ask:** a capped 30-day PLANT-03 pilot (Budgets + AI Gateway limits), go/no-go at
+  downtime $ avoided ≥ 3× spend, then fund the rollout per plant from the measured payback.
+- The $25K is an estimate (serverless compute, model serving, Lakebase, LLM tokens, integration
+  effort). Confirm it with Databricks sizing, then from `system.billing.usage` after week 1.
 
 ## Known limitations (and what I'd do next)
 
@@ -106,5 +115,6 @@ every call is logged to inference tables.
 | `evidence/ml_model_evidence.md` | MLflow metrics + params, calibration, ML vs heuristic, UC `@prod`, endpoint + AI Gateway, smoke test, scored mix |
 | `evidence/genie_qa.md` | 5 natural-language questions → Genie's SQL → result rows |
 | `evidence/agent_whatif_log.md` | A real app agent turn calling `predict_action_value` → endpoint, with tool I/O |
+| `evidence/business_case.md` | Per-plant and fleet value (ML vs old rule vs status quo) + the SQL behind it |
 
 Source copies in `build/`; full repo: github.com/manfredcalvo/volta-industrial.
